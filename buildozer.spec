@@ -347,8 +347,6 @@ android.allow_backup = True
 # setup.py if you're using Poetry, but you need to add "toml" to source.include_exts.
 #p4a.setup_py = false
 
-# (str) extra command line arguments to pass when invoking pythonforandroid.toolchain
-p4a.extra_args = --add-extra-build-dir=/data/data/com.termux/files/usr/include:/data/data/com.termux/files/usr/lib
 #p4a.extra_args =
 
 

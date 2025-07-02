@@ -1,10 +1,10 @@
-
-name: Build ErudaBrowser APK
+name: Build Android APK
 
 on:
   push:
     branches:
       - main
+  workflow_dispatch: # Allows manual triggering
 
 jobs:
   build:
@@ -19,41 +19,59 @@ jobs:
       with:
         python-version: '3.9'
 
-    - name: Install dependencies
+    - name: Set up Java Development Kit
+      uses: actions/setup-java@v3
+      with:
+        distribution: 'temurin'
+        java-version: '17' # Buildozer often requires Java 11 or higher
+
+    - name: Install Buildozer and dependencies
       run: |
         pip install buildozer
         sudo apt-get update
-        sudo apt-get install -y libffi-dev libssl-dev
+        sudo apt-get install -y git zip unzip openjdk-17-jdk autoconf libtool pkg-config zlib1g-dev libncurses-dev libffi-dev libssl-dev
 
-    - name: Build with Buildozer
+    - name: Build Android APK (Debug)
       run: |
         buildozer android debug
 
-    - name: Sign APK
+    - name: Sign APK (Release - Requires Keystore)
+      if: success() && github.ref == 'refs/heads/main' # Only sign on main branch pushes
+      env:
+        KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+        KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+        KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+        KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
       run: |
-        # This is a placeholder for signing.
-        # For a real release, you would use a proper keystore.
-        echo "Signing APK (placeholder)..."
-        cp bin/*.apk ErudaBrowser-debug.apk
+        # Decode keystore from base64 secret
+        echo "$KEYSTORE_BASE64" | base64 --decode > android.keystore
 
-    - name: Create Release
-      id: create_release
-      uses: actions/create-release@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag_name: v${{ github.run_number }}
-        release_name: Release ${{ github.run_number }}
-        draft: false
-        prerelease: false
+        # Find the generated debug APK
+        APK_PATH=$(find bin -name "*.apk" | head -n 1)
+        if [ -z "$APK_PATH" ]; then
+          echo "Error: Debug APK not found!"
+          exit 1
+        fi
+        echo "Found debug APK: $APK_PATH"
 
-    - name: Upload Release Asset
-      id: upload-release-asset
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        # Align the APK (important for Android 9+)
+        zipalign -p 4 "$APK_PATH" "app-aligned.apk"
+
+        # Sign the aligned APK
+        apksigner sign --ks android.keystore --ks-pass env:KEYSTORE_PASSWORD --ks-key-alias "$KEY_ALIAS" --key-pass env:KEY_PASSWORD app-aligned.apk
+
+        # Rename for consistent artifact naming
+        mv app-aligned.apk ErudaBrowser-release.apk
+
+    - name: Upload Debug APK as Artifact
+      uses: actions/upload-artifact@v3
       with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./ErudaBrowser-debug.apk
-        asset_name: ErudaBrowser-debug.apk
-        asset_content_type: application/vnd.android.package-archive
+        name: ErudaBrowser-debug-apk
+        path: bin/*.apk # Adjust if buildozer output path changes
+
+    - name: Upload Release APK as Artifact
+      if: success() && github.ref == 'refs/heads/main' # Only upload release APK if signing was attempted
+      uses: actions/upload-artifact@v3
+      with:
+        name: ErudaBrowser-release-apk
+        path: ErudaBrowser-release.apk
