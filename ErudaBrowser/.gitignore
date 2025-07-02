@@ -1,0 +1,21 @@
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Kivy
+.kivy/
+*.kv
+
+# Build artifacts
+.buildozer/
+bin/
+build/
+dist/
+*.apk
+*.aab
+
+# OS/system files
+.DS_Store
+Thumbs.db

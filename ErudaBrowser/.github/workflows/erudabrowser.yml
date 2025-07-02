@@ -1,0 +1,59 @@
+
+name: Build ErudaBrowser APK
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+
+    - name: Install dependencies
+      run: |
+        pip install buildozer
+        sudo apt-get update
+        sudo apt-get install -y libffi-dev libssl-dev
+
+    - name: Build with Buildozer
+      run: |
+        buildozer android debug
+
+    - name: Sign APK
+      run: |
+        # This is a placeholder for signing.
+        # For a real release, you would use a proper keystore.
+        echo "Signing APK (placeholder)..."
+        cp bin/*.apk ErudaBrowser-debug.apk
+
+    - name: Create Release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: v${{ github.run_number }}
+        release_name: Release ${{ github.run_number }}
+        draft: false
+        prerelease: false
+
+    - name: Upload Release Asset
+      id: upload-release-asset
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./ErudaBrowser-debug.apk
+        asset_name: ErudaBrowser-debug.apk
+        asset_content_type: application/vnd.android.package-archive
