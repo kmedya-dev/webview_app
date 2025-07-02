@@ -1,1 +1,59 @@
-# webview_app
+# ErudaBrowser
+
+ErudaBrowser is a lightweight, 100% Java-free Android WebView browser application. It's designed for developers and users who want a simple browsing experience with access to a JavaScript console for debugging, thanks to the integrated Eruda.js library. The app is built using a Python-centric stack, making it a great choice for Python developers looking to get into mobile app development.
+
+## Project Details
+
+*   **Application Name:** ErudaBrowser
+*   **Platform:** Android
+*   **Programming Languages:** Python, JavaScript
+*   **Core Technologies:** Kivy, Buildozer, Eruda.js
+*   **Key Features:**
+    *   Dynamic URL loading
+    *   Eruda.js console for JavaScript debugging
+    *   Offline and online browsing capabilities
+    *   Light, dark, and system theme support
+    *   Automated APK builds and releases via GitHub Actions
+
+## Project Structure
+
+The project is organized into the following directories and files:
+
+```
+ErudaBrowser/
+├── main.py                          # The main application entry point, written in Python with Kivy. This file creates the WebView and handles the UI.
+├── assets/
+│   └── index.html                   # The default HTML page loaded by the WebView. It includes the Eruda.js integration and the theme switcher.
+├── manifest.json                    # The application's manifest file, containing metadata such as the app name, version, and permissions.
+├── requirements.txt                 # A list of the Python dependencies required for the project (Kivy and the Kivy-Garden WebView).
+├── README.md                        # This file, providing an overview of the project.
+├── .gitignore                       # A file that tells Git which files and directories to ignore.
+├── .github/
+│   └── workflows/
+│       └── erudabrowser.yml         # The GitHub Actions workflow for automatically building and releasing the Android APK.
+└── build.sh                         # A shell script for building the APK in a Termux environment.
+```
+
+## How to Build
+
+### In Termux
+
+1.  **Install dependencies:**
+    ```bash
+    pkg install python git
+    pip install buildozer
+    ```
+2.  **Clone the repository:**
+    ```bash
+    git clone <repository-url>
+    cd ErudaBrowser
+    ```
+3.  **Build the APK:**
+    ```bash
+    buildozer android debug
+    ```
+    The APK will be located in the `bin/` directory.
+
+### With GitHub Actions
+
+A debug APK is automatically built on every push to the `main` branch. You can find the APK in the "Releases" section of the GitHub repository.
