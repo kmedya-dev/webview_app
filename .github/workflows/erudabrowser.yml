@@ -54,7 +54,10 @@ jobs:
 
     - name: Build Android APK (Debug)
       run: |
-        buildozer android debug
+        for i in 1 2; do
+          buildozer android debug
+          [ $? -eq 0 ] && break || sleep 10
+        done
 
     - name: Sign APK (Release - Requires Keystore)
       if: success() && github.ref == 'refs/heads/main' # Only sign on main branch pushes
