@@ -54,9 +54,9 @@ jobs:
 
     - name: Build Android APK (Debug)
       run: |
-        for i in 1 2; do
-          buildozer android debug
-          [ $? -eq 0 ] && break || sleep 10
+        for i in {1..2}; do
+          buildozer android debug && break || \
+          echo "Build failed, retrying..." && sleep 15
         done
 
     - name: Sign APK (Release - Requires Keystore)
