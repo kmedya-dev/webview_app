@@ -25,30 +25,26 @@ jobs:
         distribution: 'temurin'
         java-version: '17' # Buildozer often requires Java 11 or higher
 
-    - name: Set up Android SDK
+    - name: Accept Android SDK Licenses
       run: |
-        # Define ANDROID_HOME
-        echo "ANDROID_HOME=$HOME/android-sdk" >> $GITHUB_ENV
+        # Define ANDROID_HOME for this step
+        export ANDROID_HOME=$HOME/android-sdk
 
-        mkdir -p $HOME/android-sdk
+        mkdir -p $ANDROID_HOME
         mkdir -p $HOME/.android
         echo "count=0" > $HOME/.android/repositories.cfg
 
         # Download Android command line tools
         wget https://dl.google.com/android/repository/commandlinetools-linux-10406996_latest.zip -O cmdline-tools.zip
         unzip cmdline-tools.zip -d cmdline-tools
-        mkdir -p $HOME/android-sdk/cmdline-tools/latest
-        mv cmdline-tools/cmdline-tools/* $HOME/android-sdk/cmdline-tools/latest/
+        mkdir -p $ANDROID_HOME/cmdline-tools/latest
+        mv cmdline-tools/cmdline-tools/* $ANDROID_HOME/cmdline-tools/latest/
 
-        # Add SDK tools to PATH for this step and subsequent steps
-        echo "$HOME/android-sdk/cmdline-tools/latest/bin" >> $GITHUB_PATH
-        echo "$HOME/android-sdk/platform-tools" >> $GITHUB_PATH
-        export PATH="$PATH:$HOME/android-sdk/cmdline-tools/latest/bin"
-        export PATH="$PATH:$HOME/android-sdk/platform-tools"
+        # Add SDK tools to PATH for this step
+        export PATH="$PATH:$ANDROID_HOME/cmdline-tools/latest/bin"
 
-        # Accept licenses and install necessary SDK components
+        # Accept licenses
         yes | sdkmanager --licenses
-        sdkmanager "platform-tools" "build-tools;33.0.2" "platforms;android-33"
 
     - name: Install Buildozer and dependencies
       run: |
