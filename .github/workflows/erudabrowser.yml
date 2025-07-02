@@ -59,6 +59,9 @@ jobs:
           echo "Build failed, retrying..." && sleep 15
         done
 
+    - name: List bin directory contents
+      run: ls -l bin/
+
     - name: Sign APK (Release - Requires Keystore)
       if: success() && github.ref == 'refs/heads/main' # Only sign on main branch pushes
       env:
