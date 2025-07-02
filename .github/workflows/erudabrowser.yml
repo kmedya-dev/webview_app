@@ -64,14 +64,14 @@ jobs:
         mv app-aligned.apk ErudaBrowser-release.apk
 
     - name: Upload Debug APK as Artifact
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: ErudaBrowser-debug-apk
         path: bin/*.apk # Adjust if buildozer output path changes
 
     - name: Upload Release APK as Artifact
       if: success() && github.ref == 'refs/heads/main' # Only upload release APK if signing was attempted
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: ErudaBrowser-release-apk
         path: ErudaBrowser-release.apk
