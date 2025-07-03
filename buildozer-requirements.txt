@@ -1,3 +1,4 @@
 buildozer
 cython
 appdirs
+packaging
