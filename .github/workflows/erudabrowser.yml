@@ -45,7 +45,7 @@ jobs:
 
         # Install Python dependencies for Buildozer
         pip install --upgrade pip setuptools wheel
-        pip install buildozer cython
+        pip install -r buildozer-requirements.txt
 
     - name: Build Debug APK with Buildozer
       run: |
