@@ -57,40 +57,40 @@ jobs:
         name: ErudaBrowser-debug-apk
         path: ${{ steps.find_debug_apk.outputs.apk_path }}
 
+    - name: Determine if signing is enabled
+      id: signing_check
+      run: |
+        if [ -n "${{ secrets.KEYSTORE_BASE64 }}" ]; then
+          echo "signing_enabled=true" >> $GITHUB_OUTPUT
+        else
+          echo "signing_enabled=false" >> $GITHUB_OUTPUT
+        fi
+
     - name: Sign Release APK (Optional)
-      if: success() && github.ref == 'refs/heads/main' && secrets.KEYSTORE_BASE64 != '' # Only sign on main branch if keystore secrets are provided
+      if: steps.signing_check.outputs.signing_enabled == 'true' && github.ref == 'refs/heads/main'
       env:
         KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
         KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
         KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
         KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
       run: |
-        # Decode keystore from base64 secret
         echo "$KEYSTORE_BASE64" | base64 --decode > android.keystore
-
-        # Get the path of the debug APK from the previous step
         DEBUG_APK_PATH="${{ steps.find_debug_apk.outputs.apk_path }}"
         if [ -z "$DEBUG_APK_PATH" ]; then
           echo "Error: Debug APK path not found from previous step!"
           exit 1
         fi
         echo "Signing debug APK: $DEBUG_APK_PATH"
-
-        # Align the APK (important for Android 9+)
         zipalign -p 4 "$DEBUG_APK_PATH" "app-aligned.apk"
-
-        # Sign the aligned APK using apksigner (recommended for Android 7.0+)
         apksigner sign --ks android.keystore 
           --ks-pass env:KEYSTORE_PASSWORD 
           --ks-key-alias "$KEY_ALIAS" 
           --key-pass env:KEY_PASSWORD 
           app-aligned.apk
-
-        # Rename for consistent artifact naming
         mv app-aligned.apk ErudaBrowser-release.apk
 
     - name: Upload Release APK as Artifact
-      if: success() && github.ref == 'refs/heads/main' && steps.signing_check.outputs.signing_enabled == 'true'
+      if: steps.signing_check.outputs.signing_enabled == 'true' && github.ref == 'refs/heads/main'
       uses: actions/upload-artifact@v4
       with:
         name: ErudaBrowser-release-apk
