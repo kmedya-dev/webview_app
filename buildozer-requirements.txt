@@ -4,3 +4,4 @@ appdirs
 packaging
 colorama
 jinja2
+toml
