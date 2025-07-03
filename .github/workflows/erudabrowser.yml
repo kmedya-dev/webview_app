@@ -9,6 +9,8 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      ANDROID_HOME: ${{ github.workspace }}/.buildozer/android/platform/android-sdk
 
     steps:
     - name: Checkout repository
@@ -37,6 +39,7 @@ jobs:
 
     - name: Build Debug APK with Buildozer
       run: |
+        buildozer android clean
         buildozer android debug
 
     - name: Find Debug APK
