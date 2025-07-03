@@ -13,11 +13,7 @@ class ErudaBrowserApp(App):
 
         # Path to your local HTML file in assets folder
         # For Android, assets are typically accessed via 'file:///android_asset/'
-        if platform == 'android':
-            local_html_path = 'file:///android_asset/index.html'
-        else:
-            # For desktop/other platforms, use a relative path
-            local_html_path = os.path.join(self.directory, 'assets', 'index.html')
+        local_html_path = 'http://127.0.0.1:8080/assets/index.html' # Auto-load local server
 
         self.url_input = TextInput(
             text=local_html_path, # Default to loading local HTML
@@ -36,9 +32,17 @@ class ErudaBrowserApp(App):
         )
         browse_button.bind(on_press=self.load_url)
 
+        devtools_button = Button(
+            text='DevTools',
+            size_hint_y=None,
+            height='48dp'
+        )
+        devtools_button.bind(on_press=self.toggle_devtools)
+
         nav_bar = BoxLayout(size_hint_y=None, height='48dp')
         nav_bar.add_widget(self.url_input)
         nav_bar.add_widget(browse_button)
+        nav_bar.add_widget(devtools_button)
 
         layout.add_widget(nav_bar)
         layout.add_widget(self.webview)
@@ -47,11 +51,16 @@ class ErudaBrowserApp(App):
 
         return layout
 
+    def toggle_devtools(self, instance):
+        # Execute JavaScript to toggle Eruda DevTools
+        self.webview.eval_js('eruda.toggle();')
+
     def load_url(self, instance=None):
         url = self.url_input.text
-        # Basic URL validation/prefixing for external URLs
         if not url.startswith(('http://', 'https://', 'file://')):
-            url = 'http://' + url
+            # If it's not a URL, treat it as a search query
+            search_query = url.replace(' ', '+') # Replace spaces with '+' for URL encoding
+            url = f"https://www.google.com/search?q={search_query}"
         self.webview.url = url
 
 if __name__ == '__main__':
