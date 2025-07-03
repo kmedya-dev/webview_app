@@ -10,7 +10,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     container:
-      image: kivy/buildozer:2023.11.15  # ✅ All deps preinstalled (Python, SDK, NDK, Java)
+      image: kivy/buildozer@sha256:cc8122710460f9045c81382e03f0fad0aa27e007b160987bed4b3c745816b816  # ✅ All deps preinstalled (Python, SDK, NDK, Java)
 
     steps:
     - name: Checkout Code
