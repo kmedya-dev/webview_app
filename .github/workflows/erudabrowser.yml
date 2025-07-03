@@ -1,4 +1,4 @@
-name: Build Android APK
+name: Build ErudaBrowser APK
 
 on:
   push:
@@ -14,56 +14,51 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v3
 
-    - name: Set up Python
+    - name: Set up Python 3.10
       uses: actions/setup-python@v4
       with:
-        python-version: '3.9'
+        python-version: '3.10'
 
-    - name: Set up Java Development Kit
+    - name: Set up Java Development Kit 17
       uses: actions/setup-java@v3
       with:
         distribution: 'temurin'
-        java-version: '17' # Buildozer often requires Java 11 or higher
-
-    - name: Accept Android SDK Licenses
-      run: |
-        # Define ANDROID_HOME for this step
-        export ANDROID_HOME=$HOME/android-sdk
-
-        mkdir -p $ANDROID_HOME
-        mkdir -p $HOME/.android
-        echo "count=0" > $HOME/.android/repositories.cfg
-
-        # Download Android command line tools
-        wget https://dl.google.com/android/repository/commandlinetools-linux-10406996_latest.zip -O cmdline-tools.zip
-        unzip cmdline-tools.zip -d cmdline-tools
-        mkdir -p $ANDROID_HOME/cmdline-tools/latest
-        mv cmdline-tools/cmdline-tools/* $ANDROID_HOME/cmdline-tools/latest/
-
-        # Add SDK tools to PATH for this step
-        export PATH="$PATH:$ANDROID_HOME/cmdline-tools/latest/bin"
-
-        # Accept licenses
-        yes | sdkmanager --licenses
+        java-version: '17'
 
     - name: Install Buildozer and dependencies
       run: |
-        pip install buildozer cython
+        # Install system dependencies for Buildozer
         sudo apt-get update
         sudo apt-get install -y git zip unzip openjdk-17-jdk autoconf libtool pkg-config zlib1g-dev libncurses-dev libffi-dev libssl-dev
 
-    - name: Build Android APK (Debug)
+        # Install Python dependencies for Buildozer
+        pip install --upgrade pip setuptools wheel
+        pip install buildozer cython
+
+    - name: Build Debug APK with Buildozer
       run: |
-        for i in {1..2}; do
-          buildozer android debug && break || \
-          echo "Build failed, retrying..." && sleep 15
-        done
+        buildozer android debug
 
-    - name: List bin directory contents
-      run: ls -l bin/
+    - name: Find Debug APK
+      id: find_debug_apk
+      run: |
+        APK_PATH=$(find bin -name "*.apk" | head -n 1)
+        if [ -z "$APK_PATH" ]; then
+          echo "Error: Debug APK not found! Listing bin/ contents:"
+          ls -l bin/
+          exit 1
+        fi
+        echo "Found debug APK: $APK_PATH"
+        echo "apk_path=$APK_PATH" >> $GITHUB_OUTPUT
 
-    - name: Sign APK (Release - Requires Keystore)
-      if: success() && github.ref == 'refs/heads/main' # Only sign on main branch pushes
+    - name: Upload Debug APK as Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: ErudaBrowser-debug-apk
+        path: ${{ steps.find_debug_apk.outputs.apk_path }}
+
+    - name: Sign Release APK (Optional)
+      if: success() && github.ref == 'refs/heads/main' && secrets.KEYSTORE_BASE64 != '' # Only sign on main branch if keystore secrets are provided
       env:
         KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
         KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
@@ -73,31 +68,25 @@ jobs:
         # Decode keystore from base64 secret
         echo "$KEYSTORE_BASE64" | base64 --decode > android.keystore
 
-        # Find the generated debug APK
-        APK_PATH=$(find bin -name "*.apk" | head -n 1)
-        if [ -z "$APK_PATH" ]; then
-          echo "Error: Debug APK not found!"
+        # Get the path of the debug APK from the previous step
+        DEBUG_APK_PATH="${{ steps.find_debug_apk.outputs.apk_path }}"
+        if [ -z "$DEBUG_APK_PATH" ]; then
+          echo "Error: Debug APK path not found from previous step!"
           exit 1
         fi
-        echo "Found debug APK: $APK_PATH"
+        echo "Signing debug APK: $DEBUG_APK_PATH"
 
         # Align the APK (important for Android 9+)
-        zipalign -p 4 "$APK_PATH" "app-aligned.apk"
+        zipalign -p 4 "$DEBUG_APK_PATH" "app-aligned.apk"
 
-        # Sign the aligned APK
+        # Sign the aligned APK using apksigner (recommended for Android 7.0+)
         apksigner sign --ks android.keystore --ks-pass env:KEYSTORE_PASSWORD --ks-key-alias "$KEY_ALIAS" --key-pass env:KEY_PASSWORD app-aligned.apk
 
         # Rename for consistent artifact naming
         mv app-aligned.apk ErudaBrowser-release.apk
 
-    - name: Upload Debug APK as Artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: ErudaBrowser-debug-apk
-        path: bin/*.apk # Adjust if buildozer output path changes
-
     - name: Upload Release APK as Artifact
-      if: success() && github.ref == 'refs/heads/main' # Only upload release APK if signing was attempted
+      if: success() && github.ref == 'refs/heads/main' && secrets.KEYSTORE_BASE64 != '' # Only upload release APK if signing was attempted
       uses: actions/upload-artifact@v4
       with:
         name: ErudaBrowser-release-apk

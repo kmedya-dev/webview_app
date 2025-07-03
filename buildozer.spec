@@ -1,21 +1,19 @@
 [app]
 
 # (str) Title of your application
-title = My Application
+title = ErudaBrowser
 
 # (str) Package name
-package.name = myapp
+package.name = erudabrowser
 
 # (str) Package domain (needed for android/ios packaging)
-package.domain = com.kmllc
+package.domain = com.kmedya
 
 # (str) Source code where the main.py live
 source.dir = .
 
 # (list) Source files to include (let empty to include all the files)
-source.include_exts = py,png,jpg,kv,atlas
-
-source.include_patterns = assets/*
+source.include_exts = py,png,jpg,kv,atlas,html,css,js
 
 # (list) Source files to exclude (let empty to not exclude anything)
 #source.exclude_exts = spec
@@ -36,7 +34,7 @@ version = 0.1
 
 # (list) Application requirements
 # comma separated e.g. requirements = sqlite3,kivy
-requirements = python3,kivy
+requirements = python3,kivy,kivy-garden.webview
 
 # (str) Custom source folders for requirements
 # Sets custom source for any requirements with recipes
@@ -94,16 +92,16 @@ fullscreen = 0
 
 # (list) Permissions
 # (See https://python-for-android.readthedocs.io/en/latest/buildoptions/#build-options-1 for all the supported syntaxes and properties)
-#android.permissions = android.permission.INTERNET, (name=android.permission.WRITE_EXTERNAL_STORAGE;maxSdkVersion=18)
+android.permissions = android.permission.INTERNET
 
 # (list) features (adds uses-feature -tags to manifest)
 #android.features = android.hardware.usb.host
 
 # (int) Target Android API, should be as high as possible.
-#android.api = 31
+android.api = 33
 
 # (int) Minimum API your APK / AAB will support.
-#android.minapi = 21
+android.minapi = 21
 
 # (int) Android SDK version to use
 #android.sdk = 20
@@ -163,7 +161,7 @@ fullscreen = 0
 #android.whitelist =
 
 # (str) Path to a custom whitelist file
-#android.whitelist_src =
+#android.blacklist_src =
 
 # (str) Path to a custom blacklist file
 #android.blacklist_src =
@@ -185,7 +183,7 @@ fullscreen = 0
 # Either form may be used, and assets need not be in 'source.include_exts'.
 # 1) android.add_assets = source_asset_relative_path
 # 2) android.add_assets = source_asset_path:destination_asset_relative_path
-#android.add_assets =
+android.add_assets = assets
 
 # (list) Put these files or directories in the apk res directory.
 # The option may be used in three ways, the value may contain one or zero ':'
@@ -297,7 +295,7 @@ android.allow_backup = True
 # (str) If you need to insert variables into your AndroidManifest.xml file,
 # you can do so with the manifestPlaceholders property.
 # This property takes a map of key-value pairs. (via a string)
-# Usage example : android.manifest_placeholders = [myCustomUrl:\"org.kivy.customurl\"]
+# Usage example : android.manifest_placeholders = [myCustomUrl:"org.kivy.customurl"]
 # android.manifest_placeholders = [:]
 
 # (bool) Skip byte compile for .py files
