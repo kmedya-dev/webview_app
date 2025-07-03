@@ -38,7 +38,7 @@ jobs:
         if [ ! -d "$P4A_DIR" ]; then
           echo "python-for-android directory not found. Cloning..."
           mkdir -p "$P4A_DIR"
-          git clone --branch v2024.03.10 https://github.com/kivy/python-for-android.git "$P4A_DIR"
+          git clone --branch master https://github.com/kivy/python-for-android.git "$P4A_DIR"
         else
           echo "python-for-android directory already exists."
         fi
