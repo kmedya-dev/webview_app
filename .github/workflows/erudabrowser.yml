@@ -79,7 +79,12 @@ jobs:
           echo "signing_enabled=false" >> $GITHUB_OUTPUT
         fi
 
-    - name: Sign Release APK (Optional)
+    - name: Build Release APK with Buildozer
+      if: steps.signing_check.outputs.signing_enabled == 'true' && github.ref == 'refs/heads/main'
+      run: |
+        buildozer android release
+
+    - name: Sign and Align Release APK
       if: steps.signing_check.outputs.signing_enabled == 'true' && github.ref == 'refs/heads/main'
       env:
         KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
@@ -88,19 +93,19 @@ jobs:
         KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
       run: |
         echo "$KEYSTORE_BASE64" | base64 --decode > android.keystore
-        DEBUG_APK_PATH="${{ steps.find_debug_apk.outputs.apk_path }}"
-        if [ -z "$DEBUG_APK_PATH" ]; then
-          echo "Error: Debug APK path not found from previous step!"
+        RELEASE_APK_PATH=$(find bin -name "*release-unsigned.apk" | head -n 1)
+        if [ -z "$RELEASE_APK_PATH" ]; then
+          echo "Error: Release APK not found! Listing bin/ contents:"
+          ls -l bin/
           exit 1
         fi
-        echo "Signing debug APK: $DEBUG_APK_PATH"
-        zipalign -p 4 "$DEBUG_APK_PATH" "app-aligned.apk"
-        apksigner sign --ks android.keystore 
-          --ks-pass env:KEYSTORE_PASSWORD 
-          --ks-key-alias "$KEY_ALIAS" 
-          --key-pass env:KEY_PASSWORD 
-          app-aligned.apk
-        mv app-aligned.apk ErudaBrowser-release.apk
+        echo "Signing release APK: $RELEASE_APK_PATH"
+        apksigner sign --ks android.keystore \
+          --ks-pass env:KEYSTORE_PASSWORD \
+          --ks-key-alias "$KEY_ALIAS" \
+          --key-pass env:KEY_PASSWORD \
+          "$RELEASE_APK_PATH"
+        zipalign -p 4 "$RELEASE_APK_PATH" "ErudaBrowser-release.apk"
 
     - name: Upload Release APK as Artifact
       if: steps.signing_check.outputs.signing_enabled == 'true' && github.ref == 'refs/heads/main'

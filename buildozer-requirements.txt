@@ -2,3 +2,4 @@ buildozer
 cython
 appdirs
 packaging
+colorama
