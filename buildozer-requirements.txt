@@ -3,3 +3,4 @@ cython
 appdirs
 packaging
 colorama
+jinja2
