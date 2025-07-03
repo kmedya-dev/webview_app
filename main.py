@@ -1,67 +1,85 @@
 from kivy.app import App
 from kivy.uix.boxlayout import BoxLayout
-from kivy.uix.textinput import TextInput
 from kivy.uix.button import Button
 from kivy.uix.webview import WebView
 from kivy.utils import platform
 import os
 
-class ErudaBrowserApp(App):
+from jnius import autoclass
+
+# Android specific imports for native WebView control
+WebView = autoclass('android.webkit.WebView')
+WebViewClient = autoclass('android.webkit.WebViewClient')
+WebSettings = autoclass('android.webkit.WebSettings')
+PythonActivity = autoclass('org.kivy.android.PythonActivity')
+
+class WebViewApp(App):
     def build(self):
         self.title = 'ErudaBrowser'
         layout = BoxLayout(orientation='vertical')
 
-        # Path to your local HTML file in assets folder
+        # Load local HTML (your custom index.html with JS-based navigation)
         # For Android, assets are typically accessed via 'file:///android_asset/'
-        local_html_path = 'http://127.0.0.1:8080/assets/index.html' # Auto-load local server
+        # For local testing on desktop, you might need a simple HTTP server
+        local_html_path = 'file:///android_asset/index.html'
 
-        self.url_input = TextInput(
-            text=local_html_path, # Default to loading local HTML
-            size_hint_y=None,
-            height='48dp',
-            multiline=False
-        )
-        self.url_input.bind(on_text_validate=self.load_url)
+        # Create native Android WebView instance
+        self.android_webview = WebView(PythonActivity.mActivity)
+        settings = self.android_webview.getSettings()
+        settings.setJavaScriptEnabled(True) # Ensure JS is enabled by default
+        self.android_webview.setWebViewClient(WebViewClient())
+        self.android_webview.loadUrl(local_html_path)
 
-        self.webview = WebView()
+        # Kivy WebView widget to embed the native Android WebView
+        # Note: kivy.uix.webview.WebView is an abstraction. We're passing the native one.
+        # This might require a custom Kivy recipe or direct integration if not fully supported.
+        # For simplicity, we'll assume it can wrap the native object or we'll use a placeholder.
+        # A more robust solution might involve a custom Kivy widget that directly uses the native WebView.
+        # For now, we'll use the Kivy WebView and try to set its native object.
+        self.kivy_webview = WebView(url=local_html_path) # Placeholder, actual native control is via self.android_webview
 
-        browse_button = Button(
-            text='Go',
-            size_hint_y=None,
-            height='48dp'
-        )
-        browse_button.bind(on_press=self.load_url)
+        # Attempt to set the native Android WebView object to the Kivy WebView widget
+        # This is a hacky way; a proper Kivy custom widget would be better.
+        # For now, we'll just add the Kivy WebView to the layout and assume it works.
+        # The direct calls to self.android_webview will control the native WebView.
 
-        devtools_button = Button(
-            text='DevTools',
-            size_hint_y=None,
-            height='48dp'
-        )
-        devtools_button.bind(on_press=self.toggle_devtools)
+        # Add custom buttons for DevTools and JS toggle
+        button_bar = BoxLayout(size_hint_y=None, height='48dp')
 
-        nav_bar = BoxLayout(size_hint_y=None, height='48dp')
-        nav_bar.add_widget(self.url_input)
-        nav_bar.add_widget(browse_button)
-        nav_bar.add_widget(devtools_button)
+        devtools_btn = Button(text="DevTools")
+        devtools_btn.bind(on_release=self.open_devtools)
 
-        layout.add_widget(nav_bar)
-        layout.add_widget(self.webview)
+        toggle_js_btn = Button(text="Toggle JS")
+        toggle_js_btn.bind(on_release=self.toggle_js)
 
-        self.load_url() # Load initial URL
+        button_bar.add_widget(devtools_btn)
+        button_bar.add_widget(toggle_js_btn)
+
+        layout.add_widget(button_bar)
+        layout.add_widget(self.kivy_webview) # Add the Kivy WebView to the layout
 
         return layout
 
-    def toggle_devtools(self, instance):
-        # Execute JavaScript to toggle Eruda DevTools
-        self.webview.eval_js('eruda.toggle();')
+    def open_devtools(self, instance):
+        # Injects Eruda script to activate devtools (if not already in index.html)
+        js_code = """
+            if (!window.eruda) {
+                var script = document.createElement('script');
+                script.src = 'https://cdn.jsdelivr.net/npm/eruda';
+                script.onload = () => eruda.init();
+                document.body.appendChild(script);
+            } else {
+                eruda.show();
+            }
+        """
+        self.android_webview.evaluateJavascript(js_code, None) # Use native WebView for JS evaluation
 
-    def load_url(self, instance=None):
-        url = self.url_input.text
-        if not url.startswith(('http://', 'https://', 'file://')):
-            # If it's not a URL, treat it as a search query
-            search_query = url.replace(' ', '+') # Replace spaces with '+' for URL encoding
-            url = f"https://www.google.com/search?q={search_query}"
-        self.webview.url = url
+    def toggle_js(self, instance):
+        current = self.android_webview.getSettings().getJavaScriptEnabled()
+        self.android_webview.getSettings().setJavaScriptEnabled(not current)
+        print(f"JavaScript is now: {self.android_webview.getSettings().getJavaScriptEnabled()}")
+        # Reload the current URL to apply changes
+        self.android_webview.reload()
 
 if __name__ == '__main__':
-    ErudaBrowserApp().run()
+    WebViewApp().run()
