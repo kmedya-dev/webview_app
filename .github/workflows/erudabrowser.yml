@@ -11,11 +11,6 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Set up Global Environment Variables
-      run: |
-        echo "ANDROID_HOME=$HOME/android-sdk" >> $GITHUB_ENV
-        echo "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:$HOME/android-sdk/cmdline-tools/latest/bin:$HOME/android-sdk/platform-tools:$PATH" >> $GITHUB_ENV
-
     - name: Checkout Code
       uses: actions/checkout@v4
 
@@ -35,21 +30,24 @@ jobs:
           libsqlite3-dev wget curl
 
     - name: Set up Android SDK
+      shell: bash
       run: |
-        mkdir -p $HOME/android-sdk/cmdline-tools
+        export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:$PATH"
+        mkdir -p $ANDROID_HOME/cmdline-tools
         wget -q https://dl.google.com/android/repository/commandlinetools-linux-10406996_latest.zip -O commandlinetools-linux.zip
-        unzip -q commandlinetools-linux.zip -d $HOME/android-sdk/cmdline-tools/temp
-        mv $HOME/android-sdk/cmdline-tools/temp/cmdline-tools $HOME/android-sdk/cmdline-tools/latest
+        unzip -q commandlinetools-linux.zip -d $ANDROID_HOME/cmdline-tools/temp
+        mv $ANDROID_HOME/cmdline-tools/temp/cmdline-tools $ANDROID_HOME/cmdline-tools/latest
 
-        yes | sdkmanager --sdk_root=$HOME/android-sdk --licenses
-        sdkmanager --sdk_root=$HOME/android-sdk 
-          "platform-tools" 
-          "platforms;android-33" 
-          "build-tools;33.0.2" 
+        export PATH=$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$PATH
+
+        yes | sdkmanager --sdk_root=$ANDROID_HOME --licenses
+        sdkmanager --sdk_root=$ANDROID_HOME \
+          "platform-tools" \
+          "platforms;android-33" \
+          "build-tools;33.0.2" \
           "platforms;android-34"
       env:
         ANDROID_HOME: $HOME/android-sdk
-        PATH: $HOME/android-sdk/cmdline-tools/latest/bin:$HOME/android-sdk/platform-tools:$PATH
 
     - name: Install Python & Buildozer
       run: |
