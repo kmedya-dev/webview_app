@@ -5,6 +5,8 @@ on:
     branches:
       - main
   workflow_dispatch: # Manual trigger
+  release:
+    types: [created]
 
 jobs:
   build:
@@ -31,17 +33,21 @@ jobs:
 
     - name: Set up Android SDK
       run: |
-        mkdir -p "$HOME/android-sdk/cmdline-tools"
-        cd "$HOME/android-sdk/cmdline-tools"
-        wget https://dl.google.com/android/repository/commandlinetools-linux-10406996_latest.zip -O sdk.zip
-        unzip sdk.zip
-        mv cmdline-tools latest
-        echo "ANDROID_SDK_ROOT=$HOME/android-sdk" >> $GITHUB_ENV
-        echo "$HOME/android-sdk/cmdline-tools/latest/bin" >> $GITHUB_PATH
-        echo "$HOME/android-sdk/platform-tools" >> $GITHUB_PATH
-        yes | sdkmanager --sdk_root=$HOME/android-sdk --licenses
+        mkdir -p $HOME/android-sdk/cmdline-tools
+        wget -q https://dl.google.com/android/repository/commandlinetools-linux-10406996_latest.zip -O commandlinetools-linux.zip
+        unzip -q commandlinetools-linux.zip -d $HOME/android-sdk/cmdline-tools/temp
+        mv $HOME/android-sdk/cmdline-tools/temp/cmdline-tools $HOME/android-sdk/cmdline-tools/latest
+
+        export PATH=$HOME/android-sdk/cmdline-tools/latest/bin:$PATH
+        sdkmanager --sdk_root=$HOME/android-sdk --licenses
         sdkmanager --sdk_root=$HOME/android-sdk \
-          "platform-tools" "platforms;android-33" "build-tools;33.0.2"
+          "platform-tools" \
+          "platforms;android-33" \
+          "build-tools;33.0.2" \
+          "platforms;android-34"
+      env:
+        ANDROID_HOME: $HOME/android-sdk
+        PATH: $HOME/android-sdk/cmdline-tools/latest/bin:$HOME/android-sdk/platform-tools:$PATH
 
     - name: Install Python & Buildozer
       run: |
@@ -64,6 +70,13 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-buildozer-local-
 
+    - name: Auto-Update versionCode and versionName
+      run: |
+        VERSION_CODE=$(date +%Y%m%d%H%M)
+        sed -i "s/^version = .*/version = $VERSION_CODE/" buildozer.spec
+        sed -i "s/^version.code = .*/version.code = $VERSION_CODE/" buildozer.spec
+        echo " Set version to $VERSION_CODE"
+
     - name: Build Debug APK
       run: |
         buildozer android clean
@@ -78,6 +91,8 @@ jobs:
           exit 1
         fi
         echo "apk_path=$APK_PATH" >> $GITHUB_OUTPUT
+        echo "::notice::Debug APK path: $APK_PATH"
+        echo " Debug APK path: $APK_PATH"
 
     - name: Upload Debug APK
       uses: actions/upload-artifact@v4
@@ -116,9 +131,42 @@ jobs:
           "$RELEASE_APK"
         zipalign -p 4 "$RELEASE_APK" ErudaBrowser-release.apk
 
+    - name: Compare APK Sizes
+      if: steps.signing.outputs.signing_enabled == 'true'
+      run: |
+        DEBUG_APK=$(find bin -name "*debug.apk" | head -n 1)
+        RELEASE_APK="ErudaBrowser-release.apk"
+        debug_size=$(stat -c%s "$DEBUG_APK")
+        release_size=$(stat -c%s "$RELEASE_APK")
+        echo " Debug APK: $((debug_size / 1024)) KB"
+        echo " Release APK: $((release_size / 1024)) KB"
+
     - name: Upload Release APK
       if: steps.signing.outputs.signing_enabled == 'true'
       uses: actions/upload-artifact@v4
       with:
         name: ErudaBrowser-release-apk
         path: ErudaBrowser-release.apk
+
+  release:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    steps:
+    - name: Download Release APK
+      uses: actions/download-artifact@v4
+      with:
+        name: ErudaBrowser-release-apk
+
+    - name: Create GitHub Release
+      uses: softprops/action-gh-release@v2
+      with:
+        files: ErudaBrowser-release.apk
+
+    # - name: Push to Google Play (Internal)
+    #   run: |
+    #     bundle install
+    #     fastlane supply --apk ErudaBrowser-release.apk \
+    #       --json_key play-key.json \
+    #       --track internal \
+    #       --package_name com.kmllc.erudabrowser
