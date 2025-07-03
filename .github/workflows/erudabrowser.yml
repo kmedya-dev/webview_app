@@ -9,8 +9,6 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    env:
-      IS_SIGNING_ENABLED: 'true'  # Force-signing for local test
 
     steps:
     - name: Checkout repository
@@ -82,13 +80,17 @@ jobs:
         zipalign -p 4 "$DEBUG_APK_PATH" "app-aligned.apk"
 
         # Sign the aligned APK using apksigner (recommended for Android 7.0+)
-        apksigner sign --ks android.keystore --ks-pass env:KEYSTORE_PASSWORD --ks-key-alias "$KEY_ALIAS" --key-pass env:KEY_PASSWORD app-aligned.apk
+        apksigner sign --ks android.keystore 
+          --ks-pass env:KEYSTORE_PASSWORD 
+          --ks-key-alias "$KEY_ALIAS" 
+          --key-pass env:KEY_PASSWORD 
+          app-aligned.apk
 
         # Rename for consistent artifact naming
         mv app-aligned.apk ErudaBrowser-release.apk
 
     - name: Upload Release APK as Artifact
-      if: success() && github.ref == 'refs/heads/main' && env.KEYSTORE_BASE64 != '' # Only upload release APK if signing was attempted
+      if: success() && github.ref == 'refs/heads/main' && steps.signing_check.outputs.signing_enabled == 'true'
       uses: actions/upload-artifact@v4
       with:
         name: ErudaBrowser-release-apk
