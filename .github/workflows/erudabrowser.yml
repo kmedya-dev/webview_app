@@ -9,61 +9,35 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    env:
-      ANDROID_HOME: ${{ github.workspace }}/.buildozer/android/platform/android-sdk
+    container:
+      image: kivy/buildozer  # ✅ All deps preinstalled (Python, SDK, NDK, Java)
 
     steps:
-    - name: Checkout repository
+    - name: Checkout Code
       uses: actions/checkout@v3
 
-    - name: Set up Python 3.10
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.10'
-
-    """    - name: Cache Buildozer global directory
+    - name: Cache Buildozer Global Dir
       uses: actions/cache@v3
       with:
         path: ~/.buildozer
-        key: ${{ runner.os }}-buildozer-${{ hashFiles('buildozer.spec') }}
+        key: ${{ runner.os }}-buildozer-global-${{ hashFiles('buildozer.spec') }}
         restore-keys: |
-          ${{ runner.os }}-buildozer-
+          ${{ runner.os }}-buildozer-global-
 
-    - name: Cache Buildozer local directory
+    - name: Cache Buildozer Local Dir
       uses: actions/cache@v3
       with:
         path: ./.buildozer
-        key: ${{ runner.os }}-buildozer-local-${{ hashFiles('buildozer.spec') }}-${{ hashFiles('buildozer-requirements.txt') }}
+        key: ${{ runner.os }}-buildozer-local-${{ hashFiles('buildozer.spec') }}
         restore-keys: |
           ${{ runner.os }}-buildozer-local-
 
-    - name: Set up Java Development Kit 17
-      uses: actions/setup-java@v3
-      with:
-        distribution: 'temurin'
-        java-version: '17'""
-
-    - name: Install Buildozer and dependencies
+    - name: Install Python Packages
       run: |
-        # Install system dependencies for Buildozer
-        sudo apt-get update
-        sudo apt-get install -y git zip unzip openjdk-17-jdk autoconf libtool pkg-config zlib1g-dev libncurses-dev libffi-dev libssl-dev
-
-        # Ensure python-for-android is present
-        P4A_DIR="${{ github.workspace }}/.buildozer/android/platform/python-for-android"
-        if [ ! -d "$P4A_DIR" ]; then
-          echo "python-for-android directory not found. Cloning..."
-          mkdir -p "$P4A_DIR"
-          git clone --branch master https://github.com/kivy/python-for-android.git "$P4A_DIR"
-        else
-          echo "python-for-android directory already exists."
-        fi
-
-        # Install Python dependencies for Buildozer
         pip install --upgrade pip setuptools wheel
-        pip install -r buildozer-requirements.txt
+        pip install buildozer cython toml
 
-    - name: Build Debug APK with Buildozer
+    - name: Build Debug APK
       run: |
         buildozer android clean
         buildozer android debug
@@ -71,23 +45,21 @@ jobs:
     - name: Find Debug APK
       id: find_debug_apk
       run: |
-        APK_PATH=$(find bin -name "*.apk" | head -n 1)
+        APK_PATH=$(find bin -name "*debug.apk" | head -n 1)
         if [ -z "$APK_PATH" ]; then
-          echo "Error: Debug APK not found! Listing bin/ contents:"
-          ls -l bin/
+          echo "❌ APK not found."
           exit 1
         fi
-        echo "Found debug APK: $APK_PATH"
         echo "apk_path=$APK_PATH" >> $GITHUB_OUTPUT
 
-    - name: Upload Debug APK as Artifact
+    - name: Upload Debug APK
       uses: actions/upload-artifact@v4
       with:
         name: ErudaBrowser-debug-apk
         path: ${{ steps.find_debug_apk.outputs.apk_path }}
 
-    - name: Determine if signing is enabled
-      id: signing_check
+    - name: Check If Signing Secrets Exist
+      id: signing
       run: |
         if [ -n "${{ secrets.KEYSTORE_BASE64 }}" ]; then
           echo "signing_enabled=true" >> $GITHUB_OUTPUT
@@ -95,36 +67,30 @@ jobs:
           echo "signing_enabled=false" >> $GITHUB_OUTPUT
         fi
 
-    - name: Build Release APK with Buildozer
-      if: steps.signing_check.outputs.signing_enabled == 'true' && github.ref == 'refs/heads/main'
+    - name: Build Release APK
+      if: steps.signing.outputs.signing_enabled == 'true'
       run: |
         buildozer android release
 
-    - name: Sign and Align Release APK
-      if: steps.signing_check.outputs.signing_enabled == 'true' && github.ref == 'refs/heads/main'
+    - name: Sign and Align APK
+      if: steps.signing.outputs.signing_enabled == 'true'
       env:
         KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
         KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
         KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
         KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
       run: |
-        echo "$KEYSTORE_BASE64" | base64 --decode > android.keystore
-        RELEASE_APK_PATH=$(find bin -name "*release-unsigned.apk" | head -n 1)
-        if [ -z "$RELEASE_APK_PATH" ]; then
-          echo "Error: Release APK not found! Listing bin/ contents:"
-          ls -l bin/
-          exit 1
-        fi
-        echo "Signing release APK: $RELEASE_APK_PATH"
-        apksigner sign --ks android.keystore \
+        echo "$KEYSTORE_BASE64" | base64 --decode > release.keystore
+        RELEASE_APK=$(find bin -name "*release-unsigned.apk" | head -n 1)
+        apksigner sign --ks release.keystore \
           --ks-pass env:KEYSTORE_PASSWORD \
           --ks-key-alias "$KEY_ALIAS" \
           --key-pass env:KEY_PASSWORD \
-          "$RELEASE_APK_PATH"
-        zipalign -p 4 "$RELEASE_APK_PATH" "ErudaBrowser-release.apk"
+          "$RELEASE_APK"
+        zipalign -p 4 "$RELEASE_APK" ErudaBrowser-release.apk
 
-    - name: Upload Release APK as Artifact
-      if: steps.signing_check.outputs.signing_enabled == 'true' && github.ref == 'refs/heads/main'
+    - name: Upload Release APK
+      if: steps.signing.outputs.signing_enabled == 'true'
       uses: actions/upload-artifact@v4
       with:
         name: ErudaBrowser-release-apk
