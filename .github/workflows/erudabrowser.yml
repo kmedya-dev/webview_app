@@ -32,15 +32,16 @@ jobs:
           libsqlite3-dev wget curl
 
     - name: Set up Android SDK
+      shell: bash
       run: |
-        mkdir -p $HOME/android-sdk/cmdline-tools
+        mkdir -p $ANDROID_HOME/cmdline-tools
         wget -q https://dl.google.com/android/repository/commandlinetools-linux-10406996_latest.zip -O commandlinetools-linux.zip
-        unzip -q commandlinetools-linux.zip -d $HOME/android-sdk/cmdline-tools/temp
-        mv $HOME/android-sdk/cmdline-tools/temp/cmdline-tools $HOME/android-sdk/cmdline-tools/latest
+        unzip -q commandlinetools-linux.zip -d $ANDROID_HOME/cmdline-tools/temp
+        mv $ANDROID_HOME/cmdline-tools/temp/cmdline-tools $ANDROID_HOME/cmdline-tools/latest
 
-        export PATH=$HOME/android-sdk/cmdline-tools/latest/bin:$PATH
-        sdkmanager --sdk_root=$HOME/android-sdk --licenses
-        sdkmanager --sdk_root=$HOME/android-sdk \
+        export PATH=$ANDROID_HOME/cmdline-tools/latest/bin:$PATH
+        yes | sdkmanager --sdk_root=$ANDROID_HOME --licenses
+        sdkmanager --sdk_root=$ANDROID_HOME \
           "platform-tools" \
           "platforms;android-33" \
           "build-tools;33.0.2" \
@@ -130,6 +131,7 @@ jobs:
           --key-pass env:KEY_PASSWORD \
           "$RELEASE_APK"
         zipalign -p 4 "$RELEASE_APK" ErudaBrowser-release.apk
+        echo "::notice::Release APK path: ErudaBrowser-release.apk"
 
     - name: Compare APK Sizes
       if: steps.signing.outputs.signing_enabled == 'true'
