@@ -1,5 +1,7 @@
 # ErudaBrowser
 
+![CI](https://github.com/kmedya-dev/erudabrowser/actions/workflows/erudabrowser.yml/badge.svg)
+
 ErudaBrowser is a lightweight, 100% Java-free Android WebView browser application. It's designed for developers and users who want a simple browsing experience with access to a JavaScript console for debugging, thanks to the integrated Eruda.js library. The app is built using a Python-centric stack, making it a great choice for Python developers looking to get into mobile app development.
 
 ## Project Details
