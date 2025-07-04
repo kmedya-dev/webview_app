@@ -37,6 +37,20 @@ jobs:
           echo "$HOME/android-sdk/platform-tools" >> $GITHUB_PATH
           echo "$HOME/android-sdk/cmdline-tools/latest/bin" >> $GITHUB_PATH
 
+      - name: Check sdkmanager path
+        run: |
+          echo "🔍 Checking if sdkmanager is available..."
+          if command -v sdkmanager >/dev/null 2>&1; then
+            echo "✅ sdkmanager found at: $(which sdkmanager)"
+          else
+            echo "❌ sdkmanager not found in PATH"
+            exit 1
+          fi
+
+      - name: Install Android SDK API 33
+        run: |
+          yes | sdkmanager "platforms;android-33"
+
       - name: Accept Licenses
         run: |
           yes | $HOME/android-sdk/cmdline-tools/latest/bin/sdkmanager --licenses
@@ -81,7 +95,7 @@ jobs:
           rm -rf ~/.buildozer/android/platform/android-sdk/build-tools
           ln -sfn $ANDROID_HOME/build-tools ~/.buildozer/android/platform/android-sdk/build-tools
           ln -sfn $ANDROID_HOME/cmdline-tools/latest ~/.buildozer/android/platform/android-sdk/tools
-          
+
       - name: Build APK
         run: |
           buildozer android debug
