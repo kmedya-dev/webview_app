@@ -9,14 +9,16 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-
-    env:
-      ANDROID_HOME: $HOME/android-sdk
-      PATH: $HOME/android-sdk/cmdline-tools/latest/bin:$HOME/android-sdk/platform-tools:$PATH
-
     steps:
+      - name:  Install Required System Tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y tar gzip curl unzip git
+
       - name: Checkout Code
         uses: actions/checkout@v4
+        with:
+          repository: kmedya-dev/webview_app
 
       - name: Set up Java 17
         uses: actions/setup-java@v3
