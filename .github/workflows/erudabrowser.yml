@@ -12,8 +12,7 @@ jobs:
 
     env:
       ANDROID_HOME: $HOME/android-sdk
-      # Always preserve system PATH
-      PATH: $HOME/android-sdk/cmdline-tools/latest/bin:$HOME/android-sdk/platform-tools:${{ env.PATH }}
+      PATH: $HOME/android-sdk/cmdline-tools/latest/bin:$HOME/android-sdk/platform-tools:$PATH
 
     steps:
       - name: Checkout Code
@@ -28,7 +27,7 @@ jobs:
       - name: Ensure base tools are available
         run: |
           sudo apt-get update
-          sudo apt-get install -y coreutils
+          sudo apt-get install -y coreutils zipalign
 
       - name: ✅ Set up Android SDK command-line tools
         run: |
@@ -45,141 +44,140 @@ jobs:
 
       - name: Install Android SDK packages
         run: |
-          echo "y" | sdkmanager --licenses
-          sdkmanager 
-            "platform-tools" 
-            "platforms;android-33" 
-            "platforms;android-34" 
-            "build-tools;33.0.2"
+          yes | sdkmanager --licenses
+          sdkmanager "platform-tools" "platforms;android-33" "platforms;android-34" "build-tools;33.0.2" "ndk;23.1.7779620"
 
       - name: Install Python & Buildozer
         run: |
           python3 -m pip install --upgrade pip
           pip install buildozer==1.5.0 cython==0.29.36 toml
 
-    - name: Cache Buildozer Global Dir
-      uses: actions/cache@v3
-      with:
-        path: ~/.buildozer
-        key: ${{ runner.os }}-buildozer-global-${{ hashFiles('buildozer.spec') }}
-        restore-keys: |
-          ${{ runner.os }}-buildozer-global-
+      - name: Cache Buildozer Global Dir
+        uses: actions/cache@v3
+        with:
+          path: ~/.buildozer
+          key: ${{ runner.os }}-buildozer-global-${{ hashFiles('buildozer.spec') }}
+          restore-keys: |
+            ${{ runner.os }}-buildozer-global-
 
-    - name: Cache Buildozer Local Dir
-      uses: actions/cache@v3
-      with:
-        path: ./.buildozer
-        key: ${{ runner.os }}-buildozer-local-${{ hashFiles('buildozer.spec') }}
-        restore-keys: |
-          ${{ runner.os }}-buildozer-local-
+      - name: Cache Buildozer Local Dir
+        uses: actions/cache@v3
+        with:
+          path: ./.buildozer
+          key: ${{ runner.os }}-buildozer-local-${{ hashFiles('buildozer.spec') }}
+          restore-keys: |
+            ${{ runner.os }}-buildozer-local-
 
-    - name: Auto-Update versionCode and versionName
-      run: |
-        if [[ "${{ github.ref }}" == "refs/tags/v*" ]]; then
-          TAG_NAME="${{ github.ref }}"
-          VERSION_NAME="${TAG_NAME#refs/tags/v}"
-          sed -i "s/^version = .*/version = $VERSION_NAME/" buildozer.spec
-          echo "Set version to $VERSION_NAME from tag"
-        else
-          VERSION_CODE=$(date +%Y%m%d%H%M)
-          sed -i "s/^version = .*/version = $VERSION_CODE/" buildozer.spec
-          echo "Set version to $VERSION_CODE"
-        fi
-        sed -i "s/^version.code = .*/version.code = $VERSION_CODE/" buildozer.spec
+      - name: Auto-Update versionCode and versionName
+        run: |
+          if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            VERSION_NAME="${GITHUB_REF#refs/tags/v}"
+            sed -i "s/^version = .*/version = $VERSION_NAME/" buildozer.spec
+            echo "Using tag version: $VERSION_NAME"
+          else
+            VERSION_CODE=$(date +%Y%m%d%H%M)
+            sed -i "s/^version = .*/version = $VERSION_CODE/" buildozer.spec
+            echo "Using timestamp version: $VERSION_CODE"
+          fi
+          VERSION_CODE=$(date +%s)
+          sed -i "s/^version.code = .*/version.code = $VERSION_CODE/" buildozer.spec
 
-    - name: Build Debug APK
-      run: |
-        buildozer android clean
-        buildozer android debug
+      - name: Build Debug APK
+        run: |
+          buildozer android clean
+          buildozer android debug
 
-    - name: Find Debug APK
-      id: find_debug_apk
-      run: |
-        APK_PATH=$(find bin -name "*debug.apk" | head -n 1)
-        if [ -z "$APK_PATH" ]; then
-          echo "❌ APK not found."
-          exit 1
-        fi
-        echo "apk_path=$APK_PATH" >> $GITHUB_OUTPUT
-        echo "::notice::Debug APK path: $APK_PATH"
+      - name: Find Debug APK
+        id: find_debug_apk
+        run: |
+          APK_PATH=$(find bin -name "*debug.apk" | head -n 1)
+          if [ -z "$APK_PATH" ]; then
+            echo "❌ Debug APK not found."
+            exit 1
+          fi
+          echo "apk_path=$APK_PATH" >> "$GITHUB_ENV"
+          echo "::notice::Debug APK path: $APK_PATH"
 
-    - name: Upload Debug APK
-      uses: actions/upload-artifact@v4
-      with:
-        name: ErudaBrowser-debug-apk
-        path: ${{ steps.find_debug_apk.outputs.apk_path }}
+      - name: Upload Debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: ErudaBrowser-debug-apk
+          path: ${{ env.apk_path }}
 
-    - name: Check If Signing Secrets Exist
-      id: signing
-      run: |
-        if [ -n "${{ secrets.KEYSTORE_BASE64 }}" ]; then
-          echo "signing_enabled=true" >> $GITHUB_OUTPUT
-        else
-          echo "signing_enabled=false" >> $GITHUB_OUTPUT
-        fi
+      - name: Check If Signing Secrets Exist
+        id: signing
+        run: |
+          if [ -n "${{ secrets.KEYSTORE_BASE64 }}" ]; then
+            echo "signing_enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "signing_enabled=false" >> "$GITHUB_OUTPUT"
+          fi
 
-    - name: Build Release APK
-      if: steps.signing.outputs.signing_enabled == 'true'
-      run: |
-        export ANDROIDNDKVER=23b
-        export ANDROID_NDK=$ANDROID_HOME/ndk/$ANDROIDNDKVER
-        buildozer android release
+      - name: Build Release APK
+        if: steps.signing.outputs.signing_enabled == 'true'
+        run: |
+          export ANDROID_NDK=$ANDROID_HOME/ndk/23.1.7779620
+          buildozer android release
 
-    - name: Sign and Align APK
-      if: steps.signing.outputs.signing_enabled == 'true'
-      env:
-        KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
-        KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-        KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
-        KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-      run: |
-        echo "$KEYSTORE_BASE64" | base64 --decode > release.keystore
-        RELEASE_APK=$(find bin -name "*release-unsigned.apk" | head -n 1)
-        apksigner sign --ks release.keystore \
-          --ks-pass env:KEYSTORE_PASSWORD \
-          --ks-key-alias "$KEY_ALIAS" \
-          --key-pass env:KEY_PASSWORD \
-          "$RELEASE_APK"
-        zipalign -p 4 "$RELEASE_APK" ErudaBrowser-release.apk
-        mv ErudaBrowser-release.apk bin/ErudaBrowser-release.apk
-        echo "::notice::Release APK path: ErudaBrowser-release.apk"
+      - name: Sign and Align APK
+        if: steps.signing.outputs.signing_enabled == 'true'
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          echo "$KEYSTORE_BASE64" | base64 --decode > release.keystore
+          RELEASE_APK=$(find bin -name "*release-unsigned.apk" | head -n 1)
+          if [ -z "$RELEASE_APK" ]; then
+            echo "❌ Release APK not found."
+            exit 1
+          fi
+          apksigner sign --ks release.keystore \
+            --ks-pass env:KEYSTORE_PASSWORD \
+            --ks-key-alias "$KEY_ALIAS" \
+            --key-pass env:KEY_PASSWORD \
+            "$RELEASE_APK"
+          zipalign -p 4 "$RELEASE_APK" ErudaBrowser-release.apk
+          mv ErudaBrowser-release.apk bin/ErudaBrowser-release.apk
+          echo "::notice::Release APK path: bin/ErudaBrowser-release.apk"
 
-    - name: Compare APK Sizes
-      if: steps.signing.outputs.signing_enabled == 'true'
-      run: |
-        DEBUG_APK=$(find bin -name "*debug.apk" | head -n 1)
-        RELEASE_APK="ErudaBrowser-release.apk"
-        debug_size=$(stat -c%s "$DEBUG_APK")
-        release_size=$(stat -c%s "$RELEASE_APK")
-        echo " Debug APK: $((debug_size / 1024)) KB"
-        echo " Release APK: $((release_size / 1024)) KB"
+      - name: Compare APK Sizes
+        if: steps.signing.outputs.signing_enabled == 'true'
+        run: |
+          DEBUG_APK=$(find bin -name "*debug.apk" | head -n 1)
+          RELEASE_APK=bin/ErudaBrowser-release.apk
+          debug_size=$(stat -c%s "$DEBUG_APK")
+          release_size=$(stat -c%s "$RELEASE_APK")
+          echo "Debug APK: $((debug_size / 1024)) KB"
+          echo "Release APK: $((release_size / 1024)) KB"
 
-    - name: Upload Release APK
-      if: steps.signing.outputs.signing_enabled == 'true'
-      uses: actions/upload-artifact@v4
-      with:
-        name: ErudaBrowser-release-apk
-        path: ErudaBrowser-release.apk
+      - name: Upload Release APK
+        if: steps.signing.outputs.signing_enabled == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ErudaBrowser-release-apk
+          path: bin/ErudaBrowser-release.apk
 
   release:
     needs: build
     if: startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
     steps:
-    - name: Download Release APK
-      uses: actions/download-artifact@v4
-      with:
-        name: ErudaBrowser-release-apk
+      - name: Download Release APK
+        uses: actions/download-artifact@v4
+        with:
+          name: ErudaBrowser-release-apk
 
-    - name: Create GitHub Release
-      uses: softprops/action-gh-release@v2
-      with:
-        files: ErudaBrowser-release.apk
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ErudaBrowser-release.apk
 
-    # - name: Push to Google Play (Internal)
-    #   run: |
-    #     bundle install
-    #     fastlane supply --apk ErudaBrowser-release.apk \
-    #       --json_key play-key.json \
-    #       --track internal \
-    #       --package_name com.kmllc.erudabrowser
+      # - name: Push to Google Play (future)
+      #   run: |
+      #     bundle install
+      #     fastlane supply --apk ErudaBrowser-release.apk \
+      #       --json_key play-key.json \
+      #       --track internal \
+      #       --package_name com.kmllc.erudabrowser
