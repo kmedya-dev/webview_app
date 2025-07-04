@@ -19,3 +19,5 @@ dist/
 # OS/system files
 .DS_Store
 Thumbs.db
+keystore.b64.txt
+webview_app-release-key.keystore
