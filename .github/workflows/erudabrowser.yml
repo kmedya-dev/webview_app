@@ -57,7 +57,7 @@ jobs:
 
       - name: Install Android SDK packages
         run: |
-          sdkmanager "platform-tools" "build-tools;36.0.0" "platforms;android-34" "ndk;28.1.13356709"
+          sdkmanager "platform-tools" "build-tools;36.0.0" "platforms;android-34" "ndk;25.2.9519653"
 
       - name: Check AIDL
         run: |
@@ -118,7 +118,7 @@ jobs:
       - name: Build Release APK
         if: steps.signing.outputs.signing_enabled == 'true'
         run: |
-          export ANDROID_NDK=$ANDROID_HOME/ndk/28.1.13356709
+          export ANDROID_NDK=$ANDROID_HOME/ndk/25.2.9519653
           buildozer android release
 
       - name: Sign and Align APK
