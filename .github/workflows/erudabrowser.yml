@@ -10,7 +10,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name:  Install Required System Tools
+      - name: Install Required System Tools
         run: |
           sudo apt-get update
           sudo apt-get install -y tar gzip curl unzip git
@@ -25,9 +25,9 @@ jobs:
           mkdir -p $HOME/android-sdk/cmdline-tools
           cd $HOME/android-sdk/cmdline-tools
           curl -o commandlinetools.zip https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
-          unzip commandlinetools.zip -d tmp
+          unzip commandlinetools.zip -d cmdline-tools
           rm commandlinetools.zip
-          mv tmp latest
+          mv cmdline-tools latest
 
       - name: Set ANDROID SDK paths and Accept Licenses
         run: |
@@ -35,6 +35,9 @@ jobs:
           echo "ANDROID_SDK_ROOT=$HOME/android-sdk" >> $GITHUB_ENV
           echo "$HOME/android-sdk/platform-tools" >> $GITHUB_PATH
           echo "$HOME/android-sdk/cmdline-tools/latest/bin" >> $GITHUB_PATH
+
+      - name: Accept Licenses
+        run: |
           yes | sdkmanager --licenses
 
       - name: Check sdkmanager path
@@ -50,11 +53,7 @@ jobs:
         run: |
           find $ANDROID_HOME -name aidl
 
-      
-
-      
-
-      - name:  Install Dependencies
+      - name: Install Dependencies
         run: |
           sudo apt update
           sudo apt install -y libffi-dev libssl-dev libsdl2-dev \
@@ -64,17 +63,17 @@ jobs:
             libgstreamer1.0-0 libgstreamer1.0-dev gstreamer1.0-tools gstreamer1.0-plugins-base gstreamer1.0-plugins-good \
             git zip unzip openjdk-17-jdk
 
-      - name:  Install Python Deps
+      - name: Install Python Deps
         run: |
           pip install --upgrade pip
           pip install buildozer cython virtualenv
 
-      - name:  Remove old buildozer cache (optional but recommended)
+      - name: Remove old buildozer cache
         run: |
           rm -rf .buildozer
           rm -rf ~/.buildozer
 
-      - name:  Clean Buildozer (Safe)
+      - name: Clean Buildozer (Safe)
         run: |
           if [ -d ".buildozer/android/platform/python-for-android" ]; then
             buildozer android clean
@@ -84,7 +83,7 @@ jobs:
         run: |
           buildozer android debug
 
-      - name:  Upload APK
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: ErudaBrowser-Debug-APK
@@ -159,11 +158,3 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: ErudaBrowser-release.apk
-
-      # - name: Push to Google Play (future)
-      #   run: |
-      #     bundle install
-      #     fastlane supply --apk ErudaBrowser-release.apk \
-      #       --json_key play-key.json \
-      #       --track internal \
-      #       --package_name com.kmllc.erudabrowser
