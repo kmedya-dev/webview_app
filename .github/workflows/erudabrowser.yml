@@ -76,14 +76,14 @@ jobs:
           fi
 
       - name: Fix Buildozer SDK Path (symlink)
-  run: |
-    mkdir -p ~/.buildozer/android/platform/android-sdk
-    rm -rf ~/.buildozer/android/platform/android-sdk/build-tools
-    ln -sfn $ANDROID_HOME/build-tools ~/.buildozer/android/platform/android-sdk/build-tools
+        run: |
+          mkdir -p ~/.buildozer/android/platform/android-sdk
+          m -rf ~/.buildozer/android/platform/android-sdk/build-tools
+          ln -sfn $ANDROID_HOME/build-tools ~/.buildozer/android/platform/android-sdk/build-tools
 
-- name: Build APK
-  run: |
-    buildozer android debug
+      - name: Build APK
+        run: |
+          buildozer android debug
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
