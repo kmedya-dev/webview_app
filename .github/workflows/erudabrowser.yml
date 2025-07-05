@@ -86,6 +86,13 @@ jobs:
           pip3 install --upgrade pip setuptools wheel
           pip3 install buildozer cython
 
+      - name: 🔁 Patch python-for-android (sdl2 fix)
+        run: |
+          echo "🔄 Resetting python-for-android due to sdl2 issue..."
+          rm -rf ~/.buildozer/android/platform/python-for-android
+          git clone https://github.com/kivy/python-for-android.git ~/.buildozer/android/platform/python-for-android
+          ls ~/.buildozer/android/platform/python-for-android/recipes/sdl2 || (echo "❌ SDL2 recipe still missing!" && exit 1)
+      
       - name: 🛠️ Build APK with logs
         run: |
           buildozer --log-level=2 android debug | tee buildozer.log
