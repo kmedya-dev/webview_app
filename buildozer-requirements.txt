@@ -1,5 +1,6 @@
 buildozer
 cython
+pijnius
 appdirs
 packaging
 colorama
