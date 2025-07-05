@@ -75,15 +75,28 @@ jobs:
           pip3 install --upgrade pip setuptools wheel
           pip3 install buildozer cython
 
-      - name: 🧪 Build Debug APK with Buildozer
+      - name: 🛠️ Build APK with logs
         run: |
           buildozer --log-level 3 android debug | tee buildozer.log
+
+      - name: 📄 Upload Buildozer Log
+        uses: actions/upload-artifact@v4
+        with:
+          name: buildozer-log
+          path: buildozer.log
+
+      - name: 🔍 Check bin folder
+        run: |
+          ls -alh bin/ || echo "bin/ folder does not exist"
+          find . -name "*.apk" || echo "No APK found"
 
       - name: 📤 Upload Debug APK
         uses: actions/upload-artifact@v4
         with:
           name: ErudaBrowser-debug
           path: bin/*.apk
+
+
 
       # 🔐 OPTIONAL: Sign APK (uncomment and configure for release builds)
       # - name: 🔐 Sign APK
