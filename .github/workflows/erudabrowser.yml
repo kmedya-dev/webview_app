@@ -5,6 +5,8 @@ on:
     branches:
       - main
   workflow_dispatch:
+  release:
+    types: [created]
 
 jobs:
   build:
@@ -53,11 +55,11 @@ jobs:
 
       - name: Accept Licenses
         run: |
-          yes | $HOME/android-sdk/cmdline-tools/latest/bin/sdkmanager --licenses
+          yes | sdkmanager --licenses
 
       - name: Install Android SDK packages
         run: |
-          sdkmanager "platform-tools" "build-tools;36.0.0" "platforms;android-34" "ndk;25.2.9519653"
+          sdkmanager "platform-tools" "build-tools;36.0.0" "platforms;android-34" "ndk;28.1.13356709"
 
       - name: Check AIDL
         run: |
@@ -80,8 +82,7 @@ jobs:
 
       - name: Remove old buildozer cache
         run: |
-          rm -rf .buildozer
-          rm -rf ~/.buildozer
+          rm -rf .buildozer ~/.buildozer
 
       - name: Clean Buildozer (Safe)
         run: |
@@ -99,6 +100,19 @@ jobs:
       - name: Build APK
         run: |
           buildozer android debug
+
+      - name: Show Buildozer Error Summary
+        if: always()
+        run: |
+          LOG_PATH=.buildozer/android/platform/build-arm64-v8a/build.log
+          if [ -f "$LOG_PATH" ]; then
+            echo "--- 🔍 Last 50 lines of Buildozer log ---"
+            tail -n 50 "$LOG_PATH"
+            echo "--- 🧠 Smart error scan (first match) ---"
+            grep -E "error:|Error:|fatal:" "$LOG_PATH" | head -n 10 || echo "No direct error found. Check full log manually."
+          else
+            echo "No build log found. Build may have failed before logging started."
+          fi
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
@@ -138,40 +152,4 @@ jobs:
           apksigner sign --ks release.keystore \
             --ks-pass env:KEYSTORE_PASSWORD \
             --ks-key-alias "$KEY_ALIAS" \
-            --key-pass env:KEY_PASSWORD \
-            "$RELEASE_APK"
-          zipalign -p 4 "$RELEASE_APK" ErudaBrowser-release.apk
-          mv ErudaBrowser-release.apk bin/ErudaBrowser-release.apk
-          echo "::notice::Release APK path: bin/ErudaBrowser-release.apk"
-
-      - name: Compare APK Sizes
-        if: steps.signing.outputs.signing_enabled == 'true'
-        run: |
-          DEBUG_APK=$(find bin -name "*debug.apk" | head -n 1)
-          RELEASE_APK=bin/ErudaBrowser-release.apk
-          debug_size=$(stat -c%s "$DEBUG_APK")
-          release_size=$(stat -c%s "$RELEASE_APK")
-          echo "Debug APK: $((debug_size / 1024)) KB"
-          echo "Release APK: $((release_size / 1024)) KB"
-
-      - name: Upload Release APK
-        if: steps.signing.outputs.signing_enabled == 'true'
-        uses: actions/upload-artifact@v4
-        with:
-          name: ErudaBrowser-release-apk
-          path: bin/ErudaBrowser-release.apk
-
-  release:
-    needs: build
-    if: startsWith(github.ref, 'refs/tags/')
-    runs-on: ubuntu-latest
-    steps:
-      - name: Download Release APK
-        uses: actions/download-artifact@v4
-        with:
-          name: ErudaBrowser-release-apk
-
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          files: ErudaBrowser-release.apk
+            --key-pass env:
