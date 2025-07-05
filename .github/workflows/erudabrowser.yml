@@ -77,7 +77,7 @@ jobs:
 
       - name: 🛠️ Build APK with logs
         run: |
-          buildozer --log-level 3 android debug | tee buildozer.log
+          buildozer --log-level 2 android debug | tee buildozer.log
 
       - name: 📄 Upload Buildozer Log
         uses: actions/upload-artifact@v4
