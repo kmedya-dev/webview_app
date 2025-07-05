@@ -56,7 +56,20 @@ jobs:
             "platforms;android-33" \
             "build-tools;33.0.2" \
             "ndk;25.1.8937393"
+      
+      - name: 🔗 Fix AIDL location for Buildozer
+        run: |
+          BUILD_TOOLS_DIR=$(find $HOME/android-sdk/build-tools -maxdepth 1 -type d | grep "33.0.2" || true)
+          if [ -z "$BUILD_TOOLS_DIR" ]; then
+            echo "❌ Build-tools 33.0.2 not found!"
+            exit 1
+          fi
 
+          mkdir -p ~/.buildozer/android/platform/android-sdk/build-tools
+          ln -sfn "$BUILD_TOOLS_DIR" ~/.buildozer/android/platform/android-sdk/build-tools/33.0.2
+
+          echo "✅ AIDL path symlinked for Buildozer."
+      
       - name: 🛠️ Install Buildozer and Cython
         run: |
           pip3 install --upgrade pip setuptools wheel
