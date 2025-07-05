@@ -8,57 +8,73 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout Repo
+      - name: 📥 Checkout Repository
         uses: actions/checkout@v3
 
-      - name: Smart Scan
-        run: |
-          echo "📦 Running smart dependency scan..."
+      - name: 🔍 Smart Dependency Scan
+        run: echo "📦 Running smart dependency scan..."
 
-      - name: Install GCC and Build Tools
+      - name: ⚙️ Install GCC and Build Tools
         run: |
           sudo apt update
           sudo apt install -y build-essential
           gcc --version
 
-      - name: Install Dependencies
+      - name: 📦 Install System Dependencies
         run: |
           sudo apt install -y \
             zip unzip curl git python3 python3-pip \
             openjdk-17-jdk python3-setuptools python3-wheel \
             libffi-dev libssl-dev libsqlite3-dev zlib1g-dev
 
-      - name: Setup Android SDK
+      - name: 📦 Download and Extract Android Command Line Tools
         run: |
-          mkdir -p $HOME/android-sdk
-          cd $HOME/android-sdk
+          export ANDROID_SDK_ROOT=$HOME/android-sdk
+          mkdir -p "$ANDROID_SDK_ROOT/cmdline-tools"
+          cd "$ANDROID_SDK_ROOT/cmdline-tools"
           curl -O https://dl.google.com/android/repository/commandlinetools-linux-10406996_latest.zip
-          unzip commandlinetools-linux-*.zip -d cmdline-tools
-          mkdir -p "$ANDROID_SDK_ROOT/cmdline-tools/latest"
-          mv cmdline-tools/* "$ANDROID_SDK_ROOT/cmdline-tools/latest/"
+          unzip commandlinetools-linux-*.zip -d tmp
+          mkdir -p latest
+          mv tmp/cmdline-tools/* latest/
 
-      - name: Set Android Env Vars
+      - name: ⚙️ Set Android Environment Variables
         run: |
           echo "ANDROID_SDK_ROOT=$HOME/android-sdk" >> $GITHUB_ENV
           echo "PATH=$PATH:$HOME/android-sdk/cmdline-tools/latest/bin:$HOME/android-sdk/platform-tools:$HOME/android-sdk/emulator" >> $GITHUB_ENV
 
-      - name: Install Android SDK Packages
+      - name: 📦 Install Android SDK Packages
         run: |
           yes | sdkmanager --licenses
           sdkmanager --sdk_root=$HOME/android-sdk \
-            "platform-tools" "platforms;android-33" "build-tools;33.0.2" "ndk;25.1.8937393"
+            "platform-tools" \
+            "platforms;android-33" \
+            "build-tools;33.0.2" \
+            "ndk;25.1.8937393"
 
-      - name: Install Buildozer & Cython
+      - name: 🛠️ Install Buildozer and Cython
         run: |
           pip3 install --upgrade pip setuptools wheel
           pip3 install buildozer cython
 
-      - name: Build APK with Buildozer
-        run: |
-          buildozer android debug
+      - name: 🧪 Build Debug APK with Buildozer
+        run: buildozer android debug
 
-      - name: Upload Debug APK
+      - name: 📤 Upload Debug APK
         uses: actions/upload-artifact@v4
         with:
           name: ErudaBrowser-debug
           path: bin/*.apk
+
+      # 🔐 OPTIONAL: Sign Release APK
+      # - name: 🔐 Sign APK (Release Build Only)
+      #   run: |
+      #     jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA-256 \
+      #     -keystore your-release-key.jks \
+      #     bin/ErudaBrowser-release-unsigned.apk your-alias-name
+
+      # 📤 OPTIONAL: Upload Release APK
+      # - name: 📤 Upload Release APK
+      #   uses: actions/upload-artifact@v4
+      #   with:
+      #     name: ErudaBrowser-release
+      #     path: bin/*release*.apk
