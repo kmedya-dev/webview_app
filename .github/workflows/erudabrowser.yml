@@ -37,10 +37,16 @@ jobs:
           mkdir -p latest
           mv tmp/cmdline-tools/* latest/
      
-      - name: Link SDK for Buildozer
+      - name: Symlink tools/bin/sdkmanager for Buildozer compatibility
         run: |
-          mkdir -p ~/.buildozer/android/platform
-          ln -s $HOME/android-sdk ~/.buildozer/android/platform/android-sdk
+          mkdir -p ~/.buildozer/android/platform/android-sdk
+          ln -sfn $HOME/android-sdk ~/.buildozer/android/platform/android-sdk
+
+          # Buildozer expects tools/bin/sdkmanager to exist
+          mkdir -p $HOME/android-sdk/tools
+          ln -sfn $HOME/android-sdk/cmdline-tools/latest $HOME/android-sdk/tools
+
+          echo "✅ sdkmanager symlinked for Buildozer."
       
       - name: ⚙️ Set Android Environment Variables
         run: |
