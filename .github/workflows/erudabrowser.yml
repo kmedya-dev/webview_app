@@ -1,155 +1,63 @@
 name: Build ErudaBrowser APK
 
 on:
-  push:
-    branches:
-      - main
   workflow_dispatch:
-  release:
-    types: [created]
 
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Install Required System Tools
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y tar gzip curl unzip git
+      - name: Checkout Repo
+        uses: actions/checkout@v3
 
-      - name: Checkout Code
-        uses: actions/checkout@v4
-        with:
-          repository: kmedya-dev/webview_app
-
-      - name: Setup Android SDK
+      - name: Smart Scan
         run: |
-          mkdir -p $HOME/android-sdk/cmdline-tools
-          cd $HOME/android-sdk/cmdline-tools
-          curl -o commandlinetools.zip https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
-          unzip commandlinetools.zip
-          mkdir -p $HOME/android-sdk/cmdline-tools/latest
-          mv cmdline-tools/* $HOME/android-sdk/cmdline-tools/latest/
-          rm -rf commandlinetools.zip cmdline-tools
+          echo "📦 Running smart dependency scan..."
 
-      - name: Set Android SDK paths
+      - name: Install GCC and Build Tools
         run: |
-          echo "ANDROID_HOME=$HOME/android-sdk" >> $GITHUB_ENV
-          echo "ANDROID_SDK_ROOT=$HOME/android-sdk" >> $GITHUB_ENV
-          echo "$HOME/android-sdk/platform-tools" >> $GITHUB_PATH
-          echo "$HOME/android-sdk/cmdline-tools/latest/bin" >> $GITHUB_PATH
-
-      - name: Check sdkmanager path
-        run: |
-          echo "🔍 Checking if sdkmanager is available..."
-          if command -v sdkmanager >/dev/null 2>&1; then
-            echo "✅ sdkmanager found at: $(which sdkmanager)"
-          else
-            echo "❌ sdkmanager not found in PATH"
-            exit 1
-          fi
-
-      - name: Install Android SDK API 33
-        run: |
-          yes | sdkmanager "platforms;android-33"
-
-      - name: Accept Licenses
-        run: |
-          yes | sdkmanager --licenses
-
-      - name: Install Android SDK packages
-        run: |
-          sdkmanager "platform-tools" "build-tools;36.0.0" "platforms;android-34" "ndk;28.1.13356709"
-
-      - name: Check AIDL
-        run: |
-          find $ANDROID_HOME -name aidl
+          sudo apt update
+          sudo apt install -y build-essential
+          gcc --version
 
       - name: Install Dependencies
         run: |
-          sudo apt update
-          sudo apt install -y libffi-dev libssl-dev libsdl2-dev \
-            libsdl2-image-dev libsdl2-mixer-dev libsdl2-ttf-dev \
-            libportmidi-dev libswscale-dev libavformat-dev libavcodec-dev \
-            zlib1g-dev \
-            libgstreamer1.0-0 libgstreamer1.0-dev gstreamer1.0-tools gstreamer1.0-plugins-base gstreamer1.0-plugins-good \
-            git zip unzip openjdk-17-jdk
+          sudo apt install -y \
+            zip unzip curl git python3 python3-pip \
+            openjdk-17-jdk python3-setuptools python3-wheel \
+            libffi-dev libssl-dev libsqlite3-dev zlib1g-dev
 
-      - name: Install Python Deps
+      - name: Setup Android SDK
         run: |
-          pip install --upgrade pip
-          pip install buildozer cython virtualenv
+          mkdir -p $HOME/android-sdk
+          cd $HOME/android-sdk
+          curl -O https://dl.google.com/android/repository/commandlinetools-linux-10406996_latest.zip
+          unzip commandlinetools-linux-*.zip -d cmdline-tools
+          mv cmdline-tools $HOME/android-sdk/cmdline-tools/latest
 
-      - name: Remove old buildozer cache
+      - name: Set Android Env Vars
         run: |
-          rm -rf .buildozer ~/.buildozer
+          echo "ANDROID_SDK_ROOT=$HOME/android-sdk" >> $GITHUB_ENV
+          echo "PATH=$PATH:$HOME/android-sdk/cmdline-tools/latest/bin:$HOME/android-sdk/platform-tools:$HOME/android-sdk/emulator" >> $GITHUB_ENV
 
-      - name: Clean Buildozer (Safe)
+      - name: Install Android SDK Packages
         run: |
-          if [ -d ".buildozer/android/platform/python-for-android" ]; then
-            buildozer android clean
-          fi
+          yes | sdkmanager --licenses
+          sdkmanager --sdk_root=$HOME/android-sdk \
+            "platform-tools" "platforms;android-33" "build-tools;33.0.2" "ndk;25.1.8937393"
 
-      - name: Fix Buildozer SDK Path (symlink)
+      - name: Install Buildozer & Cython
         run: |
-          mkdir -p ~/.buildozer/android/platform/android-sdk
-          rm -rf ~/.buildozer/android/platform/android-sdk/build-tools
-          ln -sfn $ANDROID_HOME/build-tools ~/.buildozer/android/platform/android-sdk/build-tools
-          ln -sfn $ANDROID_HOME/cmdline-tools/latest ~/.buildozer/android/platform/android-sdk/tools
+          pip3 install --upgrade pip setuptools wheel
+          pip3 install buildozer cython
 
-      - name: Build APK
+      - name: Build APK with Buildozer
         run: |
           buildozer android debug
 
-      - name: Show Buildozer Error Summary
-        if: always()
-        run: |
-          LOG_PATH=.buildozer/android/platform/build-arm64-v8a/build.log
-          if [ -f "$LOG_PATH" ]; then
-            echo "--- 🔍 Last 50 lines of Buildozer log ---"
-            tail -n 50 "$LOG_PATH"
-            echo "--- 🧠 Smart error scan (first match) ---"
-            grep -E "error:|Error:|fatal:" "$LOG_PATH" | head -n 10 || echo "No direct error found. Check full log manually."
-          else
-            echo "No build log found. Build may have failed before logging started."
-          fi
-
-      - name: Upload APK
+      - name: Upload Debug APK
         uses: actions/upload-artifact@v4
         with:
-          name: ErudaBrowser-Debug-APK
+          name: ErudaBrowser-debug
           path: bin/*.apk
-
-      - name: Check If Signing Secrets Exist
-        id: signing
-        run: |
-          if [ -n "${{ secrets.KEYSTORE_BASE64 }}" ]; then
-            echo "signing_enabled=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "signing_enabled=false" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Build Release APK
-        if: steps.signing.outputs.signing_enabled == 'true'
-        run: |
-          export ANDROID_NDK=$ANDROID_HOME/ndk/25.2.9519653
-          buildozer android release
-
-      - name: Sign and Align APK
-        if: steps.signing.outputs.signing_enabled == 'true'
-        env:
-          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
-          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
-          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-        run: |
-          echo "$KEYSTORE_BASE64" | base64 --decode > release.keystore
-          RELEASE_APK=$(find bin -name "*release-unsigned.apk" | head -n 1)
-          if [ -z "$RELEASE_APK" ]; then
-            echo "❌ Release APK not found."
-            exit 1
-          fi
-          apksigner sign --ks release.keystore \
-            --ks-pass env:KEYSTORE_PASSWORD \
-            --ks-key-alias "$KEY_ALIAS" \
-            --key-pass env:
