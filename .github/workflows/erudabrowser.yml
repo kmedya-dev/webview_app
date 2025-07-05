@@ -1,8 +1,11 @@
-name: Build ErudaBrowser APK
+name: Build & Release ErudaBrowser APK
 
 on:
   push:
     branches: [main]
+    tags:
+      - 'v*'  # Auto-release on version tags like v1.0.0
+  workflow_dispatch:
 
 jobs:
   build:
@@ -12,25 +15,34 @@ jobs:
       - name: 📥 Checkout Repository
         uses: actions/checkout@v3
 
-      - name: 🧭 Show Project Tree
-        run: |
-          sudo apt install tree
-          tree -L 2 || echo "tree failed"
+      - name: ☕ Set up JDK 17
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '17'
 
-      - name: ⚙️ Install GCC and Build Tools
+      - name: 🐍 Set up Python & Cache pip
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+      - uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/buildozer-requirements.txt') }}
+          restore-keys: ${{ runner.os }}-pip-
+
+      - name: 📦 Install Build & Python Dependencies
         run: |
           sudo apt update
-          sudo apt install -y build-essential
-          gcc --version
+          sudo apt install -y zip unzip curl git build-essential \
+            python3-pip python3-setuptools python3-wheel \
+            libffi-dev libssl-dev libsqlite3-dev zlib1g-dev tree
 
-      - name: 📦 Install System Dependencies
-        run: |
-          sudo apt install -y \
-            zip unzip curl git python3 python3-pip \
-            openjdk-17-jdk python3-setuptools python3-wheel \
-            libffi-dev libssl-dev libsqlite3-dev zlib1g-dev
+          pip install --upgrade pip
+          pip install -r buildozer-requirements.txt
+          pip install --no-cache-dir pysdl2
 
-      - name: 📦 Download and Extract Android Command Line Tools
+      - name: 📦 Set up Android SDK
         run: |
           export ANDROID_SDK_ROOT=$HOME/android-sdk
           mkdir -p "$ANDROID_SDK_ROOT/cmdline-tools"
@@ -40,84 +52,60 @@ jobs:
           mkdir -p latest
           mv tmp/cmdline-tools/* latest/
 
-      - name: 🧩 Legacy sdkmanager path for Buildozer compatibility
-        run: |
-          mkdir -p ~/.buildozer/android/platform/android-sdk/tools/bin
-          ln -sfn $HOME/android-sdk/cmdline-tools/latest/bin/sdkmanager ~/.buildozer/android/platform/android-sdk/tools/bin/sdkmanager
-          echo "✅ Legacy sdkmanager path linked."
+          echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT" >> $GITHUB_ENV
+          echo "PATH=$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$ANDROID_SDK_ROOT/platform-tools:$PATH" >> $GITHUB_ENV
 
-      - name: ⚙️ Set Android Environment Variables
-        run: |
-          echo "ANDROID_SDK_ROOT=$HOME/android-sdk" >> $GITHUB_ENV
-          echo "PATH=$HOME/android-sdk/cmdline-tools/latest/bin:$HOME/android-sdk/platform-tools:$HOME/android-sdk/emulator:$PATH" >> $GITHUB_ENV
-
-      - name: 📦 Install Android SDK Packages
+      - name: ✅ Install Android SDK Components
         run: |
           yes | sdkmanager --licenses
-          sdkmanager --sdk_root=$HOME/android-sdk \
+          sdkmanager \
             "platform-tools" \
             "platforms;android-33" \
             "build-tools;33.0.2" \
             "ndk;25.1.8937393"
 
-      - name: 🔗 Fix AIDL location for Buildozer
+      - name: 🔧 Patch SDK Paths for Buildozer
         run: |
-          BUILD_TOOLS_DIR=$(find $HOME/android-sdk/build-tools -maxdepth 1 -type d | grep "33.0.2" || true)
-          if [ -z "$BUILD_TOOLS_DIR" ]; then
-            echo "❌ Build-tools 33.0.2 not found!"
-            exit 1
-          fi
+          mkdir -p ~/.buildozer/android/platform/android-sdk/tools/bin
+          ln -sfn $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager ~/.buildozer/android/platform/android-sdk/tools/bin/sdkmanager
 
+          BUILD_TOOLS_DIR=$(find $ANDROID_SDK_ROOT/build-tools -maxdepth 1 -type d | grep "33.0.2" || true)
           mkdir -p ~/.buildozer/android/platform/android-sdk/build-tools
           ln -sfn "$BUILD_TOOLS_DIR" ~/.buildozer/android/platform/android-sdk/build-tools/33.0.2
 
-          echo "✅ AIDL path symlinked for Buildozer."
-
-      - name: 🧹 Clean Buildozer Cache
+      - name: 🛠️ Build APK
         run: |
-          rm -rf ~/.buildozer/android/platform/python-for-android-recipes
-
-      - name: 🧱 Install python-for-android manually
-        run: |
-          pip install --upgrade python-for-android
-
-      - name: 🛠️ Install Buildozer and Cython
-        run: |
-          pip3 install --upgrade pip setuptools wheel
-          pip3 install buildozer cython
-
-      - name: 🔁 Patch python-for-android (sdl2 fix)
-        run: |
-          echo "🔄 Resetting python-for-android due to sdl2 issue..."
-          rm -rf ~/.buildozer/android/platform/python-for-android
-          git clone https://github.com/kivy/python-for-android.git ~/.buildozer/android/platform/python-for-android
-          ls ~/.buildozer/android/platform/python-for-android/recipes/sdl2 || (echo "❌ SDL2 recipe still missing!" && exit 1)
-      
-      - name: 🛠️ Build APK with logs
-        run: |
+          buildozer android clean
           buildozer --log-level=2 android debug | tee buildozer.log
 
-      - name: 📄 Upload Buildozer Log
+      - name: 📄 Upload Build Log
         uses: actions/upload-artifact@v4
         with:
           name: buildozer-log
           path: buildozer.log
 
-      - name: 🔍 Check bin folder and APK presence
-        run: |
-          ls -alh bin/ || echo "bin/ folder does not exist"
-          find . -name "*.apk" || echo "No APK found"
-
       - name: 📤 Upload Debug APK
-        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: ErudaBrowser-debug
           path: bin/*.apk
 
-      - name: 📦 Upload Entire bin/ Folder (fallback)
-        if: always()
-        uses: actions/upload-artifact@v4
+  release:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Download APK Artifact
+        uses: actions/download-artifact@v4
         with:
-          name: bin-folder-dump
-          path: bin/
+          name: ErudaBrowser-debug
+          path: dist/
+
+      - name: 🚀 Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          name: Release ${{ github.ref_name }}
+          files: dist/*.apk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
