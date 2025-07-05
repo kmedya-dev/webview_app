@@ -36,7 +36,12 @@ jobs:
           unzip commandlinetools-linux-*.zip -d tmp
           mkdir -p latest
           mv tmp/cmdline-tools/* latest/
-
+     
+      - name: Link SDK for Buildozer
+        run: |
+          mkdir -p ~/.buildozer/android/platform
+          ln -s $HOME/android-sdk ~/.buildozer/android/platform/android-sdk
+      
       - name: ⚙️ Set Android Environment Variables
         run: |
           echo "ANDROID_SDK_ROOT=$HOME/android-sdk" >> $GITHUB_ENV
@@ -50,7 +55,16 @@ jobs:
             "platforms;android-33" \
             "build-tools;33.0.2" \
             "ndk;25.1.8937393"
-
+      
+      - name: Link SDK for Buildozer
+        run: |
+          mkdir -p ~/.buildozer/android/platform
+          ln -s $HOME/android-sdk ~/.buildozer/android/platform/android-sdk
+      
+      - name: Verify AIDL Exists
+        run: |
+          find $HOME/android-sdk -type f -name aidl   
+      
       - name: 🛠️ Install Buildozer and Cython
         run: |
           pip3 install --upgrade pip setuptools wheel
