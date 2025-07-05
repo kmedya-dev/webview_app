@@ -11,8 +11,10 @@ jobs:
       - name: 📥 Checkout Repository
         uses: actions/checkout@v3
 
-      - name: 🔍 Smart Dependency Scan
-        run: echo "📦 Running smart dependency scan..."
+      - name: 🧭 Show Project Tree
+        run: |
+          sudo apt install tree
+          tree -L 2 || echo "tree failed"
 
       - name: ⚙️ Install GCC and Build Tools
         run: |
@@ -56,7 +58,7 @@ jobs:
             "platforms;android-33" \
             "build-tools;33.0.2" \
             "ndk;25.1.8937393"
-      
+
       - name: 🔗 Fix AIDL location for Buildozer
         run: |
           BUILD_TOOLS_DIR=$(find $HOME/android-sdk/build-tools -maxdepth 1 -type d | grep "33.0.2" || true)
@@ -69,7 +71,7 @@ jobs:
           ln -sfn "$BUILD_TOOLS_DIR" ~/.buildozer/android/platform/android-sdk/build-tools/33.0.2
 
           echo "✅ AIDL path symlinked for Buildozer."
-      
+
       - name: 🛠️ Install Buildozer and Cython
         run: |
           pip3 install --upgrade pip setuptools wheel
@@ -85,29 +87,21 @@ jobs:
           name: buildozer-log
           path: buildozer.log
 
-      - name: 🔍 Check bin folder
+      - name: 🔍 Check bin folder and APK presence
         run: |
           ls -alh bin/ || echo "bin/ folder does not exist"
           find . -name "*.apk" || echo "No APK found"
 
       - name: 📤 Upload Debug APK
+        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: ErudaBrowser-debug
           path: bin/*.apk
 
-
-
-      # 🔐 OPTIONAL: Sign APK (uncomment and configure for release builds)
-      # - name: 🔐 Sign APK
-      #   run: |
-      #     jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA-256 \
-      #     -keystore your-release-key.jks \
-      #     bin/ErudaBrowser-release-unsigned.apk your-alias-name
-
-      # 📤 OPTIONAL: Upload Signed APK
-      # - name: 📤 Upload Release APK
-      #   uses: actions/upload-artifact@v4
-      #   with:
-      #     name: ErudaBrowser-release
-      #     path: bin/*release*.apk
+      - name: 📦 Upload Entire bin/ Folder (fallback)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: bin-folder-dump
+          path: bin/
