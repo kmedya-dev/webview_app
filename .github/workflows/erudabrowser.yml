@@ -1,7 +1,8 @@
 name: Build ErudaBrowser APK
 
 on:
-  workflow_dispatch:
+  push:
+    branches: [main]
 
 jobs:
   build:
@@ -71,6 +72,14 @@ jobs:
           ln -sfn "$BUILD_TOOLS_DIR" ~/.buildozer/android/platform/android-sdk/build-tools/33.0.2
 
           echo "✅ AIDL path symlinked for Buildozer."
+
+      - name: 🧹 Clean Buildozer Cache
+        run: |
+          rm -rf ~/.buildozer/android/platform/python-for-android-recipes
+
+      - name: 🧱 Install python-for-android manually
+        run: |
+          pip install --upgrade python-for-android
 
       - name: 🛠️ Install Buildozer and Cython
         run: |
