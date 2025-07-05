@@ -1,11 +1,20 @@
-
 #!/bin/bash
 
-# This script is for building the APK in Termux
+# Exit on error
+set -e
 
-# Install dependencies
-pip install -r kivy-requirements.txt
-pip install buildozer
+echo "📦 Installing Python requirements from buildozer-requirements.txt..."
+pip install --upgrade pip
+pip install --no-cache-dir -r buildozer-requirements.txt
 
-# Build the APK
-buildozer android debug
+echo "🔧 Installing Buildozer..."
+pip install --no-cache-dir --upgrade buildozer
+
+echo "🧹 Cleaning previous builds..."
+buildozer android clean
+
+echo "🚧 Building debug APK..."
+buildozer --log-level=2 android debug | tee buildozer.log
+
+echo "✅ APK build completed!"
+ls -lh bin/*.apk || echo "❌ No APK found!"
