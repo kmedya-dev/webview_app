@@ -120,7 +120,7 @@ android.ndk = 25.1.8937393
 #android.ndk_path =#
 
 # (bool) Indicate if the application should be fullscreen or not
-fullscreen = 0
+#fullscreen = 0
 
 # (string) Presplash background color (for android toolchain)
 # Supported formats are: #RRGGBB #AARRGGBB or one of the following names:
