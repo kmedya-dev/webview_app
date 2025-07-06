@@ -35,6 +35,9 @@ jobs:
           sudo apt install -y zip unzip curl git build-essential \
             libffi-dev libssl-dev libsqlite3-dev zlib1g-dev
 
+      - name: 🔐 Make build.sh executable
+        run: chmod +x build.sh
+      
       - name: 🛠️ Run build.sh with profile input
         run: |
           if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
