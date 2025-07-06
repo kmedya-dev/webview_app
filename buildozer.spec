@@ -117,7 +117,56 @@ android.ndk = 25.1.8937393
 #android.private_storage = True
 
 # (str) Android NDK directory (if empty, it will be automatically downloaded.)
+#android.ndk_path =#
+
+# (bool) Indicate if the application should be fullscreen or not
+fullscreen = 0
+
+# (string) Presplash background color (for android toolchain)
+# Supported formats are: #RRGGBB #AARRGGBB or one of the following names:
+# red, blue, green, black, white, gray, cyan, magenta, yellow, lightgray,
+# darkgray, grey, lightgrey, darkgrey, aqua, fuchsia, lime, maroon, navy,
+# olive, purple, silver, teal.
+#android.presplash_color = #FFFFFF
+
+# (string) Presplash animation using Lottie format.
+# see https://lottiefiles.com/ for examples and https://airbnb.design/lottie/
+# for general documentation.
+# Lottie files can be created using various tools, like Adobe After Effect or Synfig.
+#android.presplash_lottie = "path/to/lottie/file.json"
+
+# (str) Adaptive icon of the application (used if Android API level is 26+ at runtime)
+#icon.adaptive_foreground.filename = %(source.dir)s/data/icon_fg.png
+#icon.adaptive_background.filename = %(source.dir)s/data/icon_bg.png
+
+# (list) Permissions
+# (See https://python-for-android.readthedocs.io/en/latest/buildoptions/#build-options-1 for all the supported syntaxes and properties)
+android.permissions = android.permission.INTERNET
+
+# (list) features (adds uses-feature -tags to manifest)
+#android.features = android.hardware.usb.host
+
+# (int) Target Android API, should be as high as possible.
+android.api = 33
+
+# (int) Minimum API your APK / AAB will support.
+android.minapi = 21
+
+# (int) Android SDK version to use
+
+
+# (str) Android NDK version to use
+android.ndk = 25.1.8937393
+
+# (int) Android NDK API to use. This is the minimum API your app will support, it should usually match android.minapi.
+#android.ndk_api = 21
+
+# (bool) Use --private data storage (True) or --dir public storage (False)
+#android.private_storage = True
+
+# (str) Android NDK directory (if empty, it will be automatically downloaded.)
 #android.ndk_path =
+
 
 # (str) Android SDK directory (if empty, it will be automatically downloaded.)
 #android.sdk_path =
@@ -432,18 +481,23 @@ warn_on_root = 0
 
 #    -----------------------------------------------------------------------------
 #    Profiles
-#
-#    You can extend section / key with a profile
-#    For example, you want to deploy a demo version of your application without
-#    HD content. You could first change the title to add "(demo)" in the name
-#    and extend the excluded directories to remove the HD content.
-#
-[app@demo]
-title = My Application (demo)
-#
+#[app@demo]
+title = ErudaBrowser (Demo)
+version = 3.12-demo
+package.name = erudabrowserdemo
+icon.filename = %(source.dir)s/assets/icon_demo.png
+
 [app:source.exclude_patterns@demo]
-#images/hd/*
-#
-#    Then, invoke the command line with the "demo" profile:
-#
-#buildozer --profile demo android debug
+assets/premium/*
+assets/experimental/*
+tests/*
+*.md
+
+[app:android.permissions@demo]
+INTERNET
+
+[app:requirements@demo]
+python3,kivy,kivy-garden.webview,pysdl2,openssl
+
+[app:android.compile_options@demo]
+-DOPENSSL_NO_SSL3
