@@ -26,7 +26,7 @@ source.include_exts = py,png,jpg,kv,atlas,html,css,js
 #source.exclude_patterns = license,images/*/*.jpg
 
 # (str) Application versioning (method 1)
-version = 0.1
+version = 3.12
 
 # (str) Application versioning (method 2)
 # version.regex = __version__ = ['"](.*)['"]
@@ -108,7 +108,7 @@ android.minapi = 21
 
 
 # (str) Android NDK version to use
-android.ndk = 25b
+android.ndk = 25.1.8937393
 
 # (int) Android NDK API to use. This is the minimum API your app will support, it should usually match android.minapi.
 #android.ndk_api = 21
@@ -204,7 +204,7 @@ android.add_assets = assets
 # (bool) Enable AndroidX support. Enable when 'android.gradle_dependencies'
 # contains an 'androidx' package, or any package from Kotlin source.
 # android.enable_androidx requires android.api >= 28
-android.enable_androidx = False
+android.enable_androidx = True
 
 # (list) add java compile options
 # this can for example be necessary when importing certain java libraries using the 'android.gradle_dependencies' option
@@ -277,7 +277,7 @@ android.enable_androidx = False
 #android.adb_args = -H host.docker.internal
 
 # (bool) Copy library instead of making a libpymodules.so
-#android.copy_libs = 1
+android.copy_libs = 1
 
 # (list) The Android archs to build for, choices: armeabi-v7a, arm64-v8a, x86, x86_64
 # In past, was `android.arch` as we weren't supporting builds for multiple archs at the same time.
@@ -438,10 +438,10 @@ warn_on_root = 0
 #    HD content. You could first change the title to add "(demo)" in the name
 #    and extend the excluded directories to remove the HD content.
 #
-#[app@demo]
-#title = My Application (demo)
+[app@demo]
+title = My Application (demo)
 #
-#[app:source.exclude_patterns@demo]
+[app:source.exclude_patterns@demo]
 #images/hd/*
 #
 #    Then, invoke the command line with the "demo" profile:
