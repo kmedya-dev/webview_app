@@ -35,9 +35,12 @@ jobs:
 
       - name: 🛠️ Run build.sh with profile input
         run: |
-          chmod +x ./build.sh
-          ./build.sh "${{ github.event.inputs.profile }}"
-
+          PROFILE="default"
+          if [[ "${GITHUB_REF##*/}" == "demo" ]]; then
+            PROFILE="demo"
+          fi
+          ./build.sh "$PROFILE"
+      
       - name: 📄 Upload Build Log
         uses: actions/upload-artifact@v4
         with:
