@@ -1,6 +1,8 @@
 name: Build APK with Optional Profile
 
 on:
+  push:
+    branches: [main]
   workflow_dispatch:
     inputs:
       profile:
@@ -35,10 +37,12 @@ jobs:
 
       - name: 🛠️ Run build.sh with profile input
         run: |
-          PROFILE="default"
-          if [[ "${GITHUB_REF##*/}" == "demo" ]]; then
-            PROFILE="demo"
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            PROFILE="${{ github.event.inputs.profile }}"
+          else
+            PROFILE="default"
           fi
+          echo "📂 Using profile: $PROFILE"
           ./build.sh "$PROFILE"
       
       - name: 📄 Upload Build Log
