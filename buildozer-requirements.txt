@@ -6,4 +6,4 @@ packaging
 colorama
 jinja2
 toml
-python-for-android==2024.04.08
+python-for-android==2024.1.21
