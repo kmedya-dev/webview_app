@@ -47,13 +47,20 @@ jobs:
           fi
           echo "📂 Using profile: $PROFILE"
           ./build.sh "$PROFILE"
-      
-      - name: 📄 Upload Build Log
+          
+      - name: 📦 Compress and Upload Log Artifact
+        if: always()
+        run: |
+          mkdir -p logs
+          cp -v buildozer.log logs/ || true
+          zip -r log-artifact.zip logs/
+  
+      - name: 📤 Upload Zipped Log
         uses: actions/upload-artifact@v4
         with:
-          name: buildozer-log
-          path: buildozer.log
-
+          name: log
+          path: log-artifact.zip
+    
       - name: 📤 Upload APK
         uses: actions/upload-artifact@v4
         with:
