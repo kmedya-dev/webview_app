@@ -1,9 +1,10 @@
-name: Build APK with Optional Profile
+name: Build ErudaBrowser APK
 
 on:
   push:
-    branches: [main]
-  workflow_dispatch:
+    branches:
+      - main
+  workflow_dispatch: # Manual trigger
     inputs:
       profile:
         description: "Buildozer profile (default or demo)"
@@ -13,32 +14,84 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
-      - name: 📥 Checkout Code
-        uses: actions/checkout@v3
+      - name: Install Required System Tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y tar gzip curl unzip git
 
-      - name: 🐍 Setup Python
-        uses: actions/setup-python@v5
+      - name: Checkout Code
+        uses: actions/checkout@v4
         with:
-          python-version: "3.12"
+          repository: kmedya-dev/webview_app
 
-      - name: ☕ Setup Java
-        uses: actions/setup-java@v3
-        with:
-          distribution: temurin
-          java-version: "17"
+      - name: Setup Android SDK
+        run: |
+          mkdir -p $HOME/android-sdk/cmdline-tools
+          cd $HOME/android-sdk/cmdline-tools
+          curl -o commandlinetools.zip https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
+          unzip commandlinetools.zip -d cmdline-tools
+          rm commandlinetools.zip
+          mv cmdline-tools latest
 
-      - name: 📦 Install System Dependencies
+      - name: Set ANDROID SDK paths
+        run: |
+          echo "ANDROID_HOME=$HOME/android-sdk" >> $GITHUB_ENV
+          echo "ANDROID_SDK_ROOT=$HOME/android-sdk" >> $GITHUB_ENV
+          echo "$HOME/android-sdk/platform-tools" >> $GITHUB_PATH
+          echo "$HOME/android-sdk/cmdline-tools/latest/bin" >> $GITHUB_PATH
+
+      - name: Accept Licenses
+        run: |
+          yes | sdkmanager --licenses
+
+      - name: Check sdkmanager path
+        run: |
+          which sdkmanager || echo "sdkmanager not found"
+          ls -l $HOME/android-sdk/cmdline-tools/latest/bin
+
+      - name: Install Android SDK packages
+        run: |
+          sdkmanager "platform-tools" "build-tools;36.0.0" "platforms;android-34" "ndk;28.1.13356709"
+
+      - name: Check AIDL
+        run: |
+          find $ANDROID_HOME -name aidl
+
+      - name: Install Dependencies
         run: |
           sudo apt update
-          sudo apt install -y zip unzip curl git build-essential \
-            libffi-dev libssl-dev libsqlite3-dev zlib1g-dev
+          sudo apt install -y libffi-dev libssl-dev libsdl2-dev \
+            libsdl2-image-dev libsdl2-mixer-dev libsdl2-ttf-dev \
+            libportmidi-dev libswscale-dev libavformat-dev libavcodec-dev \
+            zlib1g-dev \
+            libgstreamer1.0-0 libgstreamer1.0-dev gstreamer1.0-tools gstreamer1.0-plugins-base gstreamer1.0-plugins-good \
+            git zip unzip openjdk-17-jdk
 
-      - name: 🔐 Make build.sh executable
-        run: chmod +x build.sh
+      - name: Install Python Deps
+        run: |
+          pip install --upgrade pip
+          pip install buildozer cython virtualenv
 
-      - name: 📂 Set profile name
+      - name: Remove old buildozer cache
+        run: |
+          rm -rf .buildozer
+          rm -rf ~/.buildozer
+
+      - name: Clean Buildozer (Safe)
+        run: |
+          if [ -d ".buildozer/android/platform/python-for-android" ]; then
+            buildozer android clean
+          fi
+
+      - name: Fix Buildozer SDK Path (symlink)
+        run: |
+          mkdir -p ~/.buildozer/android/platform/android-sdk
+          rm -rf ~/.buildozer/android/platform/android-sdk/build-tools
+          ln -sfn $ANDROID_HOME/build-tools ~/.buildozer/android/platform/android-sdk/build-tools
+          ln -sfn $ANDROID_HOME/cmdline-tools/latest ~/.buildozer/android/platform/android-sdk/tools
+
+      - name: Set profile name
         id: profile
         run: |
           if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
@@ -47,28 +100,100 @@ jobs:
             echo "profile=default" >> $GITHUB_OUTPUT
           fi
 
-      - name: 🛠️ Run build.sh with selected profile
+      - name: ️ Run build.sh with selected profile
         run: |
           PROFILE="${{ steps.profile.outputs.profile }}"
-          echo "📂 Using profile: $PROFILE"
+          echo " Using profile: $PROFILE"
           ./build.sh "$PROFILE" || true
           touch buildozer.log
 
-      - name: 📦 Compress and Upload Log Artifact
-        if: always()
+      - name: Compress and Upload Buildozer Log
         run: |
-          mkdir -p logs
-          cp -v buildozer.log logs/ || true
-          zip -r log-artifact.zip logs/
-
-      - name: 📤 Upload Zipped Log
+          if [ -s buildozer.log ]; then
+            zip buildozer_log.zip buildozer.log
+          else
+            echo "buildozer.log is empty or does not exist. Creating an empty zip file."
+            touch buildozer_log.zip
+          fi
+        
+      - name: Upload Buildozer Log Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: log
-          path: log-artifact.zip
+          name: buildozer-log
+          path: buildozer_log.zip
 
-      - name: 📤 Upload APK
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: ErudaBrowser-${{ steps.profile.outputs.profile }}
           path: bin/*.apk
+
+      - name: Check If Signing Secrets Exist
+        id: signing
+        run: |
+          if [ -n "${{ secrets.KEYSTORE_BASE64 }}" ]; then
+            echo "signing_enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "signing_enabled=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build Release APK
+        if: steps.signing.outputs.signing_enabled == 'true'
+        run: |
+          export ANDROID_NDK=$ANDROID_HOME/ndk/28.1.13356709
+          buildozer android release
+
+      - name: Sign and Align APK
+        if: steps.signing.outputs.signing_enabled == 'true'
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          echo "$KEYSTORE_BASE64" | base64 --decode > release.keystore
+          RELEASE_APK=$(find bin -name "*release-unsigned.apk" | head -n 1)
+          if [ -z "$RELEASE_APK" ]; then
+            echo "❌ Release APK not found."
+            exit 1
+          fi
+          apksigner sign --ks release.keystore \
+            --ks-pass env:KEYSTORE_PASSWORD \
+            --ks-key-alias "$KEY_ALIAS" \
+            --key-pass env:KEY_PASSWORD \
+            "$RELEASE_APK"
+          zipalign -p 4 "$RELEASE_APK" ErudaBrowser-release.apk
+          mv ErudaBrowser-release.apk bin/ErudaBrowser-release.apk
+          echo "::notice::Release APK path: bin/ErudaBrowser-release.apk"
+
+      - name: Compare APK Sizes
+        if: steps.signing.outputs.signing_enabled == 'true'
+        run: |
+          DEBUG_APK=$(find bin -name "*debug.apk" | head -n 1)
+          RELEASE_APK=bin/ErudaBrowser-release.apk
+          debug_size=$(stat -c%s "$DEBUG_APK")
+          release_size=$(stat -c%s "$RELEASE_APK")
+          echo "Debug APK: $((debug_size / 1024)) KB"
+          echo "Release APK: $((release_size / 1024)) KB"
+
+      - name: Upload Release APK
+        if: steps.signing.outputs.signing_enabled == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ErudaBrowser-release-apk
+          path: bin/ErudaBrowser-release.apk
+
+  release:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download Release APK
+        uses: actions/download-artifact@v4
+        with:
+          name: ErudaBrowser-release-apk
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ErudaBrowser-release.apk
