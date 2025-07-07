@@ -137,11 +137,9 @@ jobs:
             echo "signing_enabled=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Build Release APK
-        if: steps.signing.outputs.signing_enabled == 'true'
+      - name: Build APK
         run: |
-          export ANDROID_NDK=$ANDROID_HOME/ndk/28.1.13356709
-          buildozer android release
+          buildozer android debug 2>&1 | tee buildozer.log
 
       - name: Sign and Align APK
         if: steps.signing.outputs.signing_enabled == 'true'
