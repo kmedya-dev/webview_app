@@ -45,7 +45,7 @@ jobs:
 
       - name: Accept Licenses
         run: |
-          yes | $HOME/android-sdk/cmdline-tools/latest/bin/sdkmanager --licenses
+          yes | $HOME/android-sdk/cmdline-tools/latest/bin/sdkmanager --licenses > /dev/null || true
 
       - name: Check sdkmanager path
         run: |
@@ -92,6 +92,9 @@ jobs:
           rm -rf ~/.buildozer/android/platform/android-sdk/build-tools
           ln -sfn $ANDROID_HOME/build-tools ~/.buildozer/android/platform/android-sdk/build-tools
           ln -sfn $ANDROID_HOME/cmdline-tools/latest ~/.buildozer/android/platform/android-sdk/tools
+
+      - name: Make build.sh executable
+        run: chmod +x build.sh
 
       - name: Set profile name
         id: profile
