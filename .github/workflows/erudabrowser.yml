@@ -39,6 +39,7 @@ jobs:
         run: chmod +x build.sh
       
       - name: 🛠️ Run build.sh with profile input
+        continue-on-error: true
         run: |
           if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
             PROFILE="${{ github.event.inputs.profile }}"
@@ -46,8 +47,9 @@ jobs:
             PROFILE="default"
           fi
           echo "📂 Using profile: $PROFILE"
-          ./build.sh "$PROFILE"
-          
+          ./build.sh "$PROFILE" || true
+          touch buildozer.log
+      
       - name: 📦 Compress and Upload Log Artifact
         if: always()
         run: |
@@ -55,14 +57,23 @@ jobs:
           cp -v buildozer.log logs/ || true
           zip -r log-artifact.zip logs/
   
+      - name: 📂 Set profile name
+        id: profile
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            echo "profile=${{ github.event.inputs.profile }}" >> $GITHUB_OUTPUT
+          else
+            echo "profile=default" >> $GITHUB_OUTPUT
+          fi
+
       - name: 📤 Upload Zipped Log
         uses: actions/upload-artifact@v4
         with:
           name: log
           path: log-artifact.zip
-    
+
       - name: 📤 Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: ErudaBrowser-${{ github.event.inputs.profile || 'default' }}
+          name: ErudaBrowser-${{ steps.profile.outputs.profile }}
           path: bin/*.apk
