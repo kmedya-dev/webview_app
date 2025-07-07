@@ -107,21 +107,6 @@ jobs:
           ./build.sh "$PROFILE" || true
           touch buildozer.log
 
-      - name: Compress and Upload Buildozer Log
-        run: |
-          if [ -s buildozer.log ]; then
-            zip buildozer_log.zip buildozer.log
-          else
-            echo "buildozer.log is empty or does not exist. Creating an empty zip file."
-            touch buildozer_log.zip
-          fi
-        
-      - name: Upload Buildozer Log Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: buildozer-log
-          path: buildozer_log.zip
-
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
