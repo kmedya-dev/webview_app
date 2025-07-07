@@ -41,8 +41,7 @@ jobs:
           echo "$HOME/android-sdk/platform-tools" >> $GITHUB_PATH
           echo "$HOME/android-sdk/cmdline-tools/latest/bin" >> $GITHUB_PATH
 
-      - name: Debug SDK path
-        run: ls -la $ANDROID_HOME/cmdline-tools/latest/bin
+      
 
       - name: Accept Licenses
         run: |
