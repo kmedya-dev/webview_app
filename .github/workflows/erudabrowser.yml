@@ -37,26 +37,7 @@ jobs:
 
       - name: 🔐 Make build.sh executable
         run: chmod +x build.sh
-      
-      - name: 🛠️ Run build.sh with profile input
-        continue-on-error: true
-        run: |
-          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-            PROFILE="${{ github.event.inputs.profile }}"
-          else
-            PROFILE="default"
-          fi
-          echo "📂 Using profile: $PROFILE"
-          ./build.sh "$PROFILE" || true
-          touch buildozer.log
-      
-      - name: 📦 Compress and Upload Log Artifact
-        if: always()
-        run: |
-          mkdir -p logs
-          cp -v buildozer.log logs/ || true
-          zip -r log-artifact.zip logs/
-  
+
       - name: 📂 Set profile name
         id: profile
         run: |
@@ -65,6 +46,20 @@ jobs:
           else
             echo "profile=default" >> $GITHUB_OUTPUT
           fi
+
+      - name: 🛠️ Run build.sh with selected profile
+        run: |
+          PROFILE="${{ steps.profile.outputs.profile }}"
+          echo "📂 Using profile: $PROFILE"
+          ./build.sh "$PROFILE" || true
+          touch buildozer.log
+
+      - name: 📦 Compress and Upload Log Artifact
+        if: always()
+        run: |
+          mkdir -p logs
+          cp -v buildozer.log logs/ || true
+          zip -r log-artifact.zip logs/
 
       - name: 📤 Upload Zipped Log
         uses: actions/upload-artifact@v4
