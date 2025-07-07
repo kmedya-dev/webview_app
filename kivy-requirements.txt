@@ -1,5 +1,5 @@
 
-python3
+python
 kivy
 kivy-garden.webview
 pysdl2

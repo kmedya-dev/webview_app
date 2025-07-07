@@ -42,7 +42,6 @@ jobs:
           echo "$HOME/android-sdk/cmdline-tools/latest/bin" >> $GITHUB_PATH
 
       
-
       - name: Accept Licenses
         run: |
           yes | $HOME/android-sdk/cmdline-tools/latest/bin/sdkmanager --licenses > /dev/null || true
@@ -54,7 +53,7 @@ jobs:
 
       - name: Install Android SDK packages
         run: |
-          $HOME/android-sdk/cmdline-tools/latest/bin/sdkmanager "platform-tools" "build-tools;36.0.0" "platforms;android-34" "ndk;28.1.13356709"
+          sdkmanager "platform-tools" "build-tools;36.0.0" "platforms;android-34" "ndk;25.1.8937393"
 
       - name: Check AIDL
         run: |
@@ -118,6 +117,22 @@ jobs:
           name: ErudaBrowser-${{ steps.profile.outputs.profile }}
           path: bin/*.apk
 
+      - name: Upload buildozer.log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: buildozer-log-${{ steps.profile.outputs.profile }}
+          path: buildozer.log
+
+      - name: Print last 20 lines of log (if failed)
+        if: failure()
+        run: |
+          tail -n 20 buildozer.log || echo "No log file found"
+
+      - name: Build APK
+        run: |
+          buildozer android debug 2>&1 | tee buildozer.log
+
       - name: Check If Signing Secrets Exist
         id: signing
         run: |
@@ -127,9 +142,11 @@ jobs:
             echo "signing_enabled=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Build APK
+      - name: Build Release APK
+        if: steps.signing.outputs.signing_enabled == 'true'
         run: |
-          buildozer android debug 2>&1 | tee buildozer.log
+          export ANDROID_NDK=$ANDROID_HOME/ndk/25.1.8937393
+          buildozer android release
 
       - name: Sign and Align APK
         if: steps.signing.outputs.signing_enabled == 'true'

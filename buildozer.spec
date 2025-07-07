@@ -34,7 +34,7 @@ version = 3.12
 
 # (list) Application requirements
 # comma separated e.g. requirements = sqlite3,kivy
-requirements = python3,kivy,kivy-garden.webview,pysdl2,openssl
+requirements = python,kivy,kivy-garden.webview,pysdl2,openssl
 android.compile_options = -DOPENSSL_NO_SSL3
 
 # (str) Custom source folders for requirements
@@ -108,7 +108,7 @@ android.minapi = 21
 
 
 # (str) Android NDK version to use
-android.ndk = 28.1.13356709
+android.ndk = 25.1.8937393
 
 # (int) Android NDK API to use. This is the minimum API your app will support, it should usually match android.minapi.
 #android.ndk_api = 21
