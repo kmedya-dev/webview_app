@@ -30,9 +30,9 @@ jobs:
           mkdir -p $HOME/android-sdk/cmdline-tools
           cd $HOME/android-sdk/cmdline-tools
           curl -o commandlinetools.zip https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
-          unzip commandlinetools.zip -d cmdline-tools
+          unzip commandlinetools.zip -d temp
           rm commandlinetools.zip
-          mv cmdline-tools latest
+          mv temp/cmdline-tools latest
 
       - name: Set ANDROID SDK paths
         run: |
