@@ -111,18 +111,9 @@ jobs:
           ./build.sh "$PROFILE" || true
           touch buildozer.log
 
-      - name: Upload APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: ErudaBrowser-${{ steps.profile.outputs.profile }}
-          path: bin/*.apk
+      
 
-      - name: Upload buildozer.log
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: buildozer-log-${{ steps.profile.outputs.profile }}
-          path: buildozer.log
+      
 
       - name: Print last 20 lines of log (if failed)
         if: failure()
@@ -132,6 +123,19 @@ jobs:
       - name: Build APK
         run: |
           buildozer android debug 2>&1 | tee buildozer.log
+
+      - name: Upload buildozer.log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: buildozer-log-${{ steps.profile.outputs.profile }}
+          path: buildozer.log
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: ErudaBrowser-${{ steps.profile.outputs.profile }}
+          path: bin/*.apk
 
       - name: Check If Signing Secrets Exist
         id: signing
