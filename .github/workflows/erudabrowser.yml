@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - main
+    tags:
+      - 'v*.*.*' # Trigger on tag pushes like v1.0.0
   workflow_dispatch: # Manual trigger
     inputs:
       profile:
@@ -11,233 +13,225 @@ on:
         required: false
         default: "default"
 
+env:
+  PYTHON_VERSION: "3.10"
+  ANDROID_SDK_ROOT: ${{ github.workspace }}/android-sdk
+  ANDROID_NDK_HOME: ${{ github.workspace }}/android-ndk-r25b
+  BUILD_TOOLS_VERSION: "36.0.0" # Latest stable as of now
+  PLATFORMS_VERSION: "android-33" # Target Android API level
+
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Install libtool and dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y build-essential autoconf automake libtool libltdl-dev
-
-      - name: Debug Build Env
-        run: |
-          gcc --version
-          autoconf --version
-          automake --version
-          /usr/bin/libtool --version || echo "libtool not found at /usr/bin/libtool"
-          echo $PATH
-
-      
-
-      - name: Symlink libtool if missing
-        run: |
-          if ! command -v libtool >/dev/null; then
-            if [ -f /usr/bin/glibtool ]; then
-              sudo ln -s /usr/bin/glibtool /usr/bin/libtool
-            fi
-          fi
-
+      # --- Initial Setup ---
       - name: Checkout Code
         uses: actions/checkout@v4
-        with:
-          repository: kmedya-dev/webview_app
+
+      - name: Set up Environment Variables for Workflow Dispatch
+        id: set_profile
+        run: |
+          PROFILE="${{ github.event.inputs.profile || 'default' }}"
+          echo "PROFILE=$PROFILE" >> $GITHUB_ENV
+          echo "profile_output=$PROFILE" >> $GITHUB_OUTPUT # For artifact naming
+
+      # --- Environment & Tooling Setup ---
+      - name: Install System Dependencies
+        run: |
+          sudo apt-get update
+          # Install essential build tools, libraries, and Java Development Kit (JDK)
+          # required for compiling Android applications and Python-for-Android.
+          sudo apt-get install -y \
+            build-essential autoconf automake libtool libltdl-dev \
+            libffi-dev libssl-dev libsdl2-dev libsdl2-image-dev libsdl2-mixer-dev libsdl2-ttf-dev \
+            libportmidi-dev libswscale-dev libavformat-dev libavcodec-dev zlib1g-dev \
+            libgstreamer1.0-0 libgstreamer1.0-dev gstreamer1.0-tools gstreamer1.0-plugins-base gstreamer1.0-plugins-good \
+            libpango1.0-dev libgl1-mesa-dev libgles2-mesa-dev git zip unzip openjdk-17-jdk
 
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.10"
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install Python Dependencies
+        run: |
+          # Upgrade pip and install core Python packages like buildozer, cython, and Kivy.
+          # Kivy is installed from its extra index URL for prebuilt wheels.
+          pip install --upgrade pip setuptools wheel
+          pip install buildozer cython virtualenv
+          pip install "kivy[base]" --extra-index-url https://kivy.org/downloads/simple/
 
       - name: Setup Android SDK
         run: |
-          mkdir -p $HOME/android-sdk/cmdline-tools
-          cd $HOME/android-sdk/cmdline-tools
+          # Download and set up the Android SDK Command-line Tools.
+          # This includes tools like `sdkmanager` and `adb`.
+          mkdir -p ${{ env.ANDROID_SDK_ROOT }}/cmdline-tools
+          cd ${{ env.ANDROID_SDK_ROOT }}/cmdline-tools
           curl -o commandlinetools.zip https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
           unzip commandlinetools.zip -d temp
           rm commandlinetools.zip
           mv temp/cmdline-tools latest
+          # Set environment variables for Android SDK paths for subsequent steps.
+          echo "ANDROID_HOME=${{ env.ANDROID_SDK_ROOT }}" >> $GITHUB_ENV
+          echo "ANDROID_SDK_ROOT=${{ env.ANDROID_SDK_ROOT }}" >> $GITHUB_ENV
+          echo "${{ env.ANDROID_SDK_ROOT }}/platform-tools" >> $GITHUB_PATH
+          echo "${{ env.ANDROID_SDK_ROOT }}/cmdline-tools/latest/bin" >> $GITHUB_PATH
 
-      - name: Accept Android SDK Licenses manually
+      - name: Accept Android SDK Licenses
         run: |
+          # Accept Android SDK licenses programmatically to allow non-interactive builds.
           mkdir -p $ANDROID_SDK_ROOT/licenses
           echo "8933bad161af4178b1185d1a37fbf41ea5269c55" > $ANDROID_SDK_ROOT/licenses/android-sdk-license
           echo "d56f5187479451eabf01fb78af6dfcb131a6481e" >> $ANDROID_SDK_ROOT/licenses/android-sdk-license
+          yes | sdkmanager --licenses
 
-      - name: Accept remaining licenses
-        run: yes | sdkmanager --licenses
-
-      - name: Set ANDROID SDK paths
+      - name: Install Android SDK Packages
         run: |
-          echo "ANDROID_HOME=$HOME/android-sdk" >> $GITHUB_ENV
-          echo "ANDROID_SDK_ROOT=$HOME/android-sdk" >> $GITHUB_ENV
-          echo "$HOME/android-sdk/platform-tools" >> $GITHUB_PATH
-          echo "$HOME/android-sdk/cmdline-tools/latest/bin" >> $GITHUB_PATH
-
-      - name: Check sdkmanager path
-        run: |
-          which sdkmanager || echo "sdkmanager not found"
-          ls -l $HOME/android-sdk/cmdline-tools/latest/bin
-
-      - name: Install Android SDK packages
-        run: |
-          sdkmanager "platform-tools" "build-tools;36.0.0" "platforms;android-33"
+          # Install specific Android SDK components: platform-tools, build-tools, and a target Android platform.
+          sdkmanager "platform-tools" "build-tools;${{ env.BUILD_TOOLS_VERSION }}" "platforms;${{ env.PLATFORMS_VERSION }}"
 
       - name: Install Android NDK
         run: |
+          # Download and extract the Android Native Development Kit (NDK).
+          # The NDK is used for compiling native code (C/C++) for Android.
           wget https://dl.google.com/android/repository/android-ndk-r25b-linux.zip
-          unzip -q android-ndk-r25b-linux.zip -d $HOME
-          echo "ANDROID_NDK_HOME=$HOME/android-ndk-r25b" >> $GITHUB_ENV
-          echo "$HOME/android-ndk-r25b" >> $GITHUB_PATH
+          unzip -q android-ndk-r25b-linux.zip -d ${{ github.workspace }}
+          # Set environment variables for Android NDK paths.
+          echo "ANDROID_NDK_HOME=${{ env.ANDROID_NDK_HOME }}" >> $GITHUB_ENV
+          echo "${{ env.ANDROID_NDK_HOME }}" >> $GITHUB_PATH
 
-      - name: Check AIDL
+      - name: Reset Compiler Environment (Safety)
         run: |
-          find $ANDROID_HOME -name aidl
-
-      - name: Reset compiler env (safety)
-        run: |
+          # Unset compiler-related environment variables to prevent conflicts with Android NDK toolchains.
+          # Re-export PATH to ensure system binaries are prioritized.
           unset CC CXX LD
-          export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+          export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:$PATH" # Ensure system paths are first
 
-      - name: Install Dependencies
+      - name: Clean Buildozer Cache
         run: |
-          sudo apt update
-          sudo apt install -y libffi-dev libssl-dev libsdl2-dev libsdl2-image-dev libsdl2-mixer-dev libsdl2-ttf-dev libportmidi-dev libswscale-dev libavformat-dev libavcodec-dev zlib1g-dev libtool libgstreamer1.0-0 libgstreamer1.0-dev gstreamer1.0-tools gstreamer1.0-plugins-base gstreamer1.0-plugins-good libpango1.0-dev libgl1-mesa-dev libgles2-mesa-dev git zip unzip openjdk-17-jdk
-
-      - name: Install Python Deps
-        run: |
-          pip install --upgrade pip
-          pip install buildozer cython virtualenv
-
-      - name: Install Kivy via prebuilt wheel
-        run: |
-          pip install --upgrade pip setuptools wheel
-          pip install "kivy[base]" --extra-index-url https://kivy.org/downloads/simple/
-
-      - name: Remove old buildozer cache
-        run: |
+          # Remove previous Buildozer build artifacts and caches to ensure a clean build.
           rm -rf .buildozer
           rm -rf ~/.buildozer
 
-      - name: Clean Buildozer (Safe)
+      - name: Fix Buildozer SDK Path Symlinks
         run: |
-          if [ -d ".buildozer/android/platform/python-for-android" ]; then
-            buildozer android clean
-          fi
-
-      - name: Fix Buildozer SDK Path (symlink)
-        run: |
+          # Create symbolic links for Buildozer to correctly locate Android SDK components.
           mkdir -p ~/.buildozer/android/platform/android-sdk
-          rm -rf ~/.buildozer/android/platform/android-sdk/build-tools
-          ln -sfn $ANDROID_HOME/build-tools ~/.buildozer/android/platform/android-sdk/build-tools
-          ln -sfn $ANDROID_HOME/cmdline-tools/latest ~/.buildozer/android/platform/android-sdk/tools
+          ln -sfn $ANDROID_SDK_ROOT/build-tools ~/.buildozer/android/platform/android-sdk/build-tools
+          ln -sfn $ANDROID_SDK_ROOT/cmdline-tools/latest ~/.buildozer/android/platform/android-sdk/tools
 
-      - name: Make build.sh executable
-        run: chmod +x build.sh
-
-      - name: Set profile name
-        id: profile
+      # --- Build Execution & Artifacts ---
+      - name: Make build.sh executable (if exists)
+        id: check_build_script
         run: |
-          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-            echo "profile=${{ github.event.inputs.profile }}" >> $GITHUB_OUTPUT
+          # Check if build.sh script exists and make it executable.
+          # This script is used for custom build logic, if present.
+          if [ -f build.sh ]; then
+            chmod +x build.sh
+            echo "build_script_exists=true" >> $GITHUB_OUTPUT
           else
-            echo "profile=default" >> $GITHUB_OUTPUT
+            echo "build_script_exists=false" >> $GITHUB_OUTPUT
           fi
 
-      - name: ️ Run build.sh with selected profile
+      - name: Build Debug APK
         run: |
-          PROFILE="${{ steps.profile.outputs.profile }}"
-          echo " Using profile: $PROFILE"
-          ./build.sh "$PROFILE" || true
-          touch buildozer.log
-
-      
-
-      
-
-      
-
-      - name: Build APK
-        run: |
-          buildozer android debug 2>&1 | tee buildozer.log
-
-      - name: Verify APK Path
-        run: |
-          APK_PATH=$(find . -type f -name "*.apk" | head -n 1)
-          if [ -f "$APK_PATH" ]; then
-            echo "✅ APK found at: $APK_PATH"
+          # Execute the build process for the debug APK.
+          # Uses build.sh if available, otherwise falls back to direct buildozer command.
+          if [ "${{ steps.check_build_script.outputs.build_script_exists }}" == "true" ]; then
+            echo "Running build.sh with profile: ${{ env.PROFILE }}"
+            ./build.sh "${{ env.PROFILE }}" 2>&1 | tee buildozer.log
           else
-            echo "❌ Still no APK found"
-            exit 1
+            echo "build.sh not found. Falling back to buildozer android debug."
+            buildozer android debug 2>&1 | tee buildozer.log
           fi
+          # Ensure buildozer.log exists even if build fails
+          [ -f buildozer.log ] || touch buildozer.log
 
-      - name: Symlink APK path
-        run: |
-          APK_PATH=$(find . -type f -name "*.apk" | head -n 1)
-          ln -s "$APK_PATH" "./ErudaBrowser.apk"
-
-      - name: Upload buildozer.log
+      - name: Upload Buildozer Log
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: buildozer-log-${{ steps.profile.outputs.profile }}
+          name: buildozer-log-${{ env.PROFILE }}
           path: buildozer.log
 
-      - name: Upload APK
+      - name: Find and Standardize Debug APK Name
+        run: |
+          # Locate the generated debug APK and standardize its name.
+          DEBUG_APK=$(find bin -name "*-debug.apk" | head -n 1)
+          if [ -z "$DEBUG_APK" ]; then
+            echo "❌ Debug APK not found. Build might have failed."
+            exit 1
+          fi
+          echo "Found Debug APK: $DEBUG_APK"
+          mv "$DEBUG_APK" bin/ErudaBrowser-debug.apk # Standardize name
+
+      - name: Create Symlink for Debug APK
+        run: |
+          # Create a generic symlink for the debug APK for easier access/reference.
+          ln -sfn bin/ErudaBrowser-debug.apk bin/ErudaBrowser.apk
+
+      - name: Upload Debug APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ErudaBrowser-${{ steps.profile.outputs.profile }}
-          path: bin/*.apk
+          name: ErudaBrowser-debug-apk-${{ env.PROFILE }}
+          path: bin/ErudaBrowser-debug.apk
 
       - name: Check If Signing Secrets Exist
-        id: signing
+        id: signing_check
         run: |
-          if [ -n "${{ secrets.KEYSTORE_BASE64 }}" ]; then
+          # Check for the presence of all necessary signing secrets.
+          # If secrets are missing, the release APK build and signing steps will be skipped.
+          if [ -n "${{ secrets.KEYSTORE_BASE64 }}" ] && \
+             [ -n "${{ secrets.KEYSTORE_PASSWORD }}" ] && \
+             [ -n "${{ secrets.KEY_ALIAS }}" ] && \
+             [ -n "${{ secrets.KEY_PASSWORD }}" ]; then
             echo "signing_enabled=true" >> "$GITHUB_OUTPUT"
           else
             echo "signing_enabled=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::Signing secrets not found. Skipping release APK build and signing."
           fi
 
-      - name: Build Release APK
-        if: steps.signing.outputs.signing_enabled == 'true'
+      - name: Build Release APK (if signing enabled)
+        if: steps.signing_check.outputs.signing_enabled == 'true'
         run: |
-          
-          buildozer android release
+          # Build the unsigned release APK if signing secrets are available.
+          buildozer android release 2>&1 | tee -a buildozer.log # Append to log
 
-      - name: Sign and Align APK
-        if: steps.signing.outputs.signing_enabled == 'true'
+      - name: Sign and Zipalign Release APK (if signing enabled)
+        if: steps.signing_check.outputs.signing_enabled == 'true'
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
+          # Decode the base64 encoded keystore, sign the release APK, and zipalign it.
+          # Zipalign optimizes the APK for Android, ensuring proper byte alignment.
           echo "$KEYSTORE_BASE64" | base64 --decode > release.keystore
-          RELEASE_APK=$(find bin -name "*release-unsigned.apk" | head -n 1)
-          if [ -z "$RELEASE_APK" ]; then
-            echo "❌ Release APK not found."
+          RELEASE_UNSIGNED_APK=$(find bin -name "*-release-unsigned.apk" | head -n 1)
+          if [ -z "$RELEASE_UNSIGNED_APK" ]; then
+            echo "❌ Unsigned release APK not found. Build might have failed."
             exit 1
           fi
+          echo "Found unsigned release APK: $RELEASE_UNSIGNED_APK"
+
+          # Sign the APK
           apksigner sign --ks release.keystore \
             --ks-pass env:KEYSTORE_PASSWORD \
             --ks-key-alias "$KEY_ALIAS" \
             --key-pass env:KEY_PASSWORD \
-            "$RELEASE_APK"
-          zipalign -p 4 "$RELEASE_APK" ErudaBrowser-release.apk
-          mv ErudaBrowser-release.apk bin/ErudaBrowser-release.apk
-          echo "::notice::Release APK path: bin/ErudaBrowser-release.apk"
+            "$RELEASE_UNSIGNED_APK"
 
-      - name: Compare APK Sizes
-        if: steps.signing.outputs.signing_enabled == 'true'
-        run: |
-          DEBUG_APK=$(find bin -name "*debug.apk" | head -n 1)
-          RELEASE_APK=bin/ErudaBrowser-release.apk
-          debug_size=$(stat -c%s "$DEBUG_APK")
-          release_size=$(stat -c%s "$RELEASE_APK")
-          echo "Debug APK: $((debug_size / 1024)) KB"
-          echo "Release APK: $((release_size / 1024)) KB"
+          # Zipalign the signed APK
+          # Output to a temporary file first, then move
+          zipalign -p 4 "$RELEASE_UNSIGNED_APK" bin/ErudaBrowser-release-aligned.apk
+          
+          # Move to final desired name
+          mv bin/ErudaBrowser-release-aligned.apk bin/ErudaBrowser-release.apk
+          echo "::notice::Release APK successfully signed, zipaligned, and moved to bin/ErudaBrowser-release.apk"
 
-      - name: Upload Release APK
-        if: steps.signing.outputs.signing_enabled == 'true'
+      - name: Upload Release APK Artifact (if signing enabled)
+        if: steps.signing_check.outputs.signing_enabled == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: ErudaBrowser-release-apk
@@ -245,15 +239,16 @@ jobs:
 
   release:
     needs: build
-    if: startsWith(github.ref, 'refs/tags/')
+    if: startsWith(github.ref, 'refs/tags/') # Only run if the push was a tag
     runs-on: ubuntu-latest
     steps:
       - name: Download Release APK
         uses: actions/download-artifact@v4
         with:
-          name: ErudaBrowser-release-apk
+          name: ErudaBrowser-release-apk # Name of the artifact uploaded in the build job
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: ErudaBrowser-release.apk
+          files: ErudaBrowser-release.apk # The downloaded file will be in the current directory
+          generate_release_notes: true # Automatically generate release notes

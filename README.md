@@ -56,10 +56,18 @@ ErudaBrowser/
     ```
 3.  **Build the APK:**
     ```bash
-    buildozer android debug
+    ./build.sh
     ```
-    The APK will be located in the `bin/` directory.
+    This will use the `default` profile. If you have a custom profile (e.g., `demo`), you can specify it:
+    ```bash
+    ./build.sh demo
+    ```
+    The APKs will be located in the `bin/` directory.
 
 ### With GitHub Actions
 
-A debug APK is automatically built on every push to the `main` branch. You can find the APK in the "Releases" section of the GitHub repository.
+The project uses GitHub Actions for automated builds and releases.
+
+*   **Debug APKs:** A debug APK is automatically built on every push to the `main` branch. You can find the build artifacts (including the debug APK and build logs) in the "Actions" tab of the GitHub repository, under the "Build ErudaBrowser APK" workflow runs.
+*   **Release APKs:** A signed and zipalign-aligned release APK is built and attached to a GitHub Release when a tag (e.g., `v1.0.0`) is pushed to the repository.
+*   **Manual Trigger:** You can also manually trigger a build from the "Actions" tab, selecting the "Build ErudaBrowser APK" workflow and choosing a specific build profile if desired.
