@@ -45,8 +45,7 @@ jobs:
             build-essential autoconf automake libtool libltdl-dev \
             libffi-dev libssl-dev libsdl2-dev libsdl2-image-dev libsdl2-mixer-dev libsdl2-ttf-dev \
             libportmidi-dev libswscale-dev libavformat-dev libavcodec-dev zlib1g-dev \
-            libgstreamer1.0-0 libgstreamer1.0-dev gstreamer1.0-tools gstreamer1.0-plugins-base gstreamer1.0-plugins-good \
-            libpango1.0-dev libgl1-mesa-dev libgles2-mesa-dev git zip unzip openjdk-17-jdk
+            libgstreamer1.0-0 libgstreamer1.0-dev gstreamer1.0-tools gstreamer1.0-plugins-base gstreamer1.0-plugins-good             libpango1.0-dev libgl1-mesa-dev libgles2-mesa-dev git zip unzip openjdk-17-jdk ant
 
       - name: Setup Python
         uses: actions/setup-python@v5
