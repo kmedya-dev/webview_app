@@ -1,6 +1,5 @@
-buildozer
-cython
-git+https://github.com/kivy/pyjnius.git
+buildozer>=1.5.0
+cython>=0.29.33
 appdirs
 packaging
 colorama

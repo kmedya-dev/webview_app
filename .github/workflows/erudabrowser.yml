@@ -14,10 +14,10 @@ on:
         default: "default"
 
 env:
-  PYTHON_VERSION: "3.10"
+  PYTHON_VERSION: "3.11"  # Updated to more compatible version
   ANDROID_SDK_ROOT: ${{ github.workspace }}/android-sdk
   ANDROID_NDK_HOME: ${{ github.workspace }}/android-ndk-r25b
-  BUILD_TOOLS_VERSION: "36.0.0" # Latest stable as of now
+  BUILD_TOOLS_VERSION: "34.0.0" # More stable version
   PLATFORMS_VERSION: "android-33" # Target Android API level
 
 jobs:
