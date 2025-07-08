@@ -25,7 +25,7 @@ jobs:
           gcc --version
           autoconf --version
           automake --version
-          libtool --version
+          /usr/bin/libtool --version || echo "libtool not found at /usr/bin/libtool"
           echo $PATH
 
       - name: Check libtool
