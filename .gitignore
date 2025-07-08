@@ -21,3 +21,4 @@ dist/
 Thumbs.db
 keystore.b64.txt
 webview_app-release-key.keystore
+buildozer.log

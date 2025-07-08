@@ -28,21 +28,7 @@ jobs:
           /usr/bin/libtool --version || echo "libtool not found at /usr/bin/libtool"
           echo $PATH
 
-      - name: Check libtool
-        run: |
-          if command -v libtool >/dev/null 2>&1; then
-            libtool --version
-          else
-            echo "libtool not found in PATH"
-          fi
-
-      - name: Check libtool
-        run: |
-          if command -v libtool >/dev/null 2>&1; then
-            libtool --version
-          else
-            echo "libtool not found in PATH"
-          fi
+      
 
       - name: Symlink libtool if missing
         run: |
@@ -71,19 +57,21 @@ jobs:
           rm commandlinetools.zip
           mv temp/cmdline-tools latest
 
+      - name: Accept Android SDK Licenses manually
+        run: |
+          mkdir -p $ANDROID_SDK_ROOT/licenses
+          echo "8933bad161af4178b1185d1a37fbf41ea5269c55" > $ANDROID_SDK_ROOT/licenses/android-sdk-license
+          echo "d56f5187479451eabf01fb78af6dfcb131a6481e" >> $ANDROID_SDK_ROOT/licenses/android-sdk-license
+
+      - name: Accept remaining licenses
+        run: yes | sdkmanager --licenses
+
       - name: Set ANDROID SDK paths
         run: |
           echo "ANDROID_HOME=$HOME/android-sdk" >> $GITHUB_ENV
           echo "ANDROID_SDK_ROOT=$HOME/android-sdk" >> $GITHUB_ENV
           echo "$HOME/android-sdk/platform-tools" >> $GITHUB_PATH
           echo "$HOME/android-sdk/cmdline-tools/latest/bin" >> $GITHUB_PATH
-
-      
-      - name: Accept Android SDK Licenses manually
-        run: |
-          mkdir -p $ANDROID_SDK_ROOT/licenses
-          echo "8933bad161af4178b1185d1a37fbf41ea5269c55" > $ANDROID_SDK_ROOT/licenses/android-sdk-license
-          echo "d56f5187479451eabf01fb78af6dfcb131a6481e" >> $ANDROID_SDK_ROOT/licenses/android-sdk-license
 
       - name: Check sdkmanager path
         run: |
@@ -105,6 +93,11 @@ jobs:
         run: |
           find $ANDROID_HOME -name aidl
 
+      - name: Reset compiler env (safety)
+        run: |
+          unset CC CXX LD
+          export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+
       - name: Install Dependencies
         run: |
           sudo apt update
@@ -114,6 +107,11 @@ jobs:
         run: |
           pip install --upgrade pip
           pip install buildozer cython virtualenv
+
+      - name: Install Kivy via prebuilt wheel
+        run: |
+          pip install --upgrade pip setuptools wheel
+          pip install "kivy[base]" --extra-index-url https://kivy.org/downloads/simple/
 
       - name: Remove old buildozer cache
         run: |
