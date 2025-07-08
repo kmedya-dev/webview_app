@@ -15,7 +15,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Install Autotools toolchain (with libtool)
+      - name: Install libtool and dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y build-essential autoconf automake libtool libltdl-dev
@@ -27,6 +27,14 @@ jobs:
           automake --version
           libtool --version
           echo $PATH
+
+      - name: Check libtool
+        run: |
+          if command -v libtool >/dev/null 2>&1; then
+            libtool --version
+          else
+            echo "libtool not found in PATH"
+          fi
 
       - name: Checkout Code
         uses: actions/checkout@v4
