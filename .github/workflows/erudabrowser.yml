@@ -20,6 +20,14 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y tar gzip curl unzip git
 
+      - name: Debug Build Env
+        run: |
+          gcc --version
+          autoconf --version
+          automake --version
+          libtool --version
+          echo $PATH
+
       - name: Checkout Code
         uses: actions/checkout@v4
         with:
@@ -74,12 +82,7 @@ jobs:
       - name: Install Dependencies
         run: |
           sudo apt update
-          sudo apt install -y libffi-dev libssl-dev libsdl2-dev \
-            libsdl2-image-dev libsdl2-mixer-dev libsdl2-ttf-dev \
-            libportmidi-dev libswscale-dev libavformat-dev libavcodec-dev \
-            zlib1g-dev \
-            libgstreamer1.0-0 libgstreamer1.0-dev gstreamer1.0-tools gstreamer1.0-plugins-base gstreamer1.0-plugins-good \
-            git zip unzip openjdk-17-jdk
+          sudo apt install -y libffi-dev libssl-dev libsdl2-dev             libsdl2-image-dev libsdl2-mixer-dev libsdl2-ttf-dev             libportmidi-dev libswscale-dev libavformat-dev libavcodec-dev             zlib1g-dev libtool             libgstreamer1.0-0 libgstreamer1.0-dev gstreamer1.0-tools gstreamer1.0-plugins-base gstreamer1.0-plugins-good             git zip unzip openjdk-17-jdk
 
       - name: Install Python Deps
         run: |
