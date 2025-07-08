@@ -3,22 +3,77 @@
 __pycache__/
 *.py[cod]
 *$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
 
 # Kivy
 .kivy/
 *.kv
 
-# Build artifacts
+# Buildozer
 .buildozer/
 bin/
-build/
-dist/
 *.apk
 *.aab
+*.ipa
 
-# OS/system files
+# Build logs
+buildozer*.log
+*.log
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# System files
 .DS_Store
 Thumbs.db
-keystore.b64.txt
-webview_app-release-key.keystore
-buildozer.log
+*.tmp
+*.temp
+
+# Android development
+local.properties
+*.jks
+*.keystore
+.gradle/
+gradle/
+
+# Secrets and keys
+*.key
+*.pem
+secrets.json
+.env
+
+# Cache directories
+.cache/
+.pytest_cache/
+
+# Backup files
+*.bak
+*.backup
+*.orig

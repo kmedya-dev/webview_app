@@ -19,11 +19,11 @@ source.include_exts = py,png,jpg,kv,atlas,html,css,js
 #source.exclude_exts = spec
 
 # (list) List of directory to exclude (let empty to not exclude anything)
-#source.exclude_dirs = tests, bin, venv
+source.exclude_dirs = tests, bin, venv, .buildozer, .git, __pycache__, .vscode, .idea
 
 # (list) List of exclusions using pattern matching
 # Do not prefix with './'
-#source.exclude_patterns = license,images/*/*.jpg
+source.exclude_patterns = license,images/*/*.jpg,*.log,*.tmp,*.backup,*.orig,requirements.txt
 
 # (str) Application versioning (method 1)
 version = 3.12
@@ -47,7 +47,7 @@ android.compile_options = -DOPENSSL_NO_SSL3
 #presplash.filename = %(source.dir)s/data/presplash.png
 
 # (str) Icon of the application
-#icon.filename = %(source.dir)s/data/icon.png
+icon.filename = %(source.dir)s/assets/icon.svg
 
 # (list) Supported orientations
 # Valid options are: landscape, portrait, portrait-reverse or landscape-reverse
@@ -441,7 +441,7 @@ warn_on_root = 0
 title = ErudaBrowser (Demo)
 version = 3.12-demo
 package.name = erudabrowserdemo
-icon.filename = %(source.dir)s/assets/icon_demo.png
+icon.filename = %(source.dir)s/assets/icon_demo.svg
 
 [app:source.exclude_patterns@demo]
 assets/premium/*
@@ -453,7 +453,7 @@ tests/*
 INTERNET
 
 [app:requirements@demo]
-python3,kivy,kivy-garden.webview,pysdl2,openssl
+python,kivy,kivy-garden.webview,pysdl2,openssl,zlib
 
 [app:android.compile_options@demo]
 -DOPENSSL_NO_SSL3

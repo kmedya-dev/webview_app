@@ -1,0 +1,27 @@
+# Core Kivy Framework
+kivy>=2.3.0
+
+# Build Tools  
+buildozer>=1.5.0
+cython>=0.29.33
+setuptools>=60.0.0
+
+# Python-for-Android
+python-for-android==2024.1.21
+
+# Essential Build Dependencies
+appdirs
+packaging
+colorama>=0.3.3
+jinja2
+toml
+virtualenv
+
+# Development and Testing
+pytest
+pexpect
+
+# System compatibility
+distlib
+filelock
+platformdirs

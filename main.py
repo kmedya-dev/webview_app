@@ -84,8 +84,22 @@ class WebViewApp(App):
         # For desktop/other platforms, use a URL
         html_url = 'file://' + os.path.join(os.getcwd(), 'assets', 'index.html')
         
-        self.webview = WebView(url=html_url)
-        layout.add_widget(self.webview)
+        try:
+            self.webview = WebView(url=html_url)
+            layout.add_widget(self.webview)
+        except Exception as e:
+            # Fallback: create a simple label with instructions
+            from kivy.uix.label import Label
+            fallback_label = Label(
+                text=f'WebView unavailable: {str(e)}\n\n' +
+                     'For full functionality, install:\n' +
+                     'pip install kivy-garden.webview\n\n' +
+                     'Or run on Android device.',
+                text_size=(None, None),
+                halign='center',
+                valign='middle'
+            )
+            layout.add_widget(fallback_label)
 
     def open_devtools(self, instance):
         """Toggle Eruda DevTools"""
