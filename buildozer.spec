@@ -37,8 +37,7 @@ version = 3.12
 requirements = python,kivy,kivy-garden.webview,pysdl2,openssl,zlib
 android.compile_options = -DOPENSSL_NO_SSL3
 
-# Explicitly set pyjnius source to ensure compatibility with Python 3
-requirements.source.pyjnius = https://github.com/kivy/pyjnius.git
+
 
 # (str) Custom source folders for requirements
 # Sets custom source for any requirements with recipes
