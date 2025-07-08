@@ -36,6 +36,22 @@ jobs:
             echo "libtool not found in PATH"
           fi
 
+      - name: Check libtool
+        run: |
+          if command -v libtool >/dev/null 2>&1; then
+            libtool --version
+          else
+            echo "libtool not found in PATH"
+          fi
+
+      - name: Symlink libtool if missing
+        run: |
+          if ! command -v libtool >/dev/null; then
+            if [ -f /usr/bin/glibtool ]; then
+              sudo ln -s /usr/bin/glibtool /usr/bin/libtool
+            fi
+          fi
+
       - name: Checkout Code
         uses: actions/checkout@v4
         with:
@@ -153,6 +169,11 @@ jobs:
             echo "❌ Still no APK found"
             exit 1
           fi
+
+      - name: Symlink APK path
+        run: |
+          APK_PATH=$(find . -type f -name "*.apk" | head -n 1)
+          ln -s "$APK_PATH" "./ErudaBrowser.apk"
 
       - name: Upload buildozer.log
         if: always()

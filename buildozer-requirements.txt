@@ -7,3 +7,4 @@ colorama
 jinja2
 toml
 python-for-android==2024.1.21
+pytest
