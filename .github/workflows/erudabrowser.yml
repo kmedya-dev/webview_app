@@ -53,7 +53,14 @@ jobs:
 
       - name: Install Android SDK packages
         run: |
-          sdkmanager "platform-tools" "build-tools;36.0.0" "platforms;android-34" "ndk;25.1.8937393"
+          sdkmanager "platform-tools" "build-tools;36.0.0" "platforms;android-34"
+
+      - name: Install Android NDK
+        run: |
+          wget https://dl.google.com/android/repository/android-ndk-r25b-linux.zip
+          unzip -q android-ndk-r25b-linux.zip -d $HOME
+          echo "ANDROID_NDK_HOME=$HOME/android-ndk-r25b" >> $GITHUB_ENV
+          echo "$HOME/android-ndk-r25b" >> $GITHUB_PATH
 
       - name: Check AIDL
         run: |
@@ -149,7 +156,7 @@ jobs:
       - name: Build Release APK
         if: steps.signing.outputs.signing_enabled == 'true'
         run: |
-          export ANDROID_NDK=$ANDROID_HOME/ndk/25.1.8937393
+          
           buildozer android release
 
       - name: Sign and Align APK
