@@ -79,10 +79,11 @@ jobs:
 
       - name: Accept Android SDK Licenses
         run: |
-          # Accept Android SDK licenses programmatically to allow non-interactive builds.
           mkdir -p $ANDROID_SDK_ROOT/licenses
-          echo "8933bad161af4178b1185d1a37fbf41ea5269c55" > $ANDROID_SDK_ROOT/licenses/android-sdk-license
-          echo "d56f5187479451eabf01fb78af6dfcb131a6481e" >> $ANDROID_SDK_ROOT/licenses/android-sdk-license
+          cat <<EOF > $ANDROID_SDK_ROOT/licenses/android-sdk-license
+8933bad161af4178b1185d1a37fbf41ea5269c55
+d56f5187479451eabf01fb78af6dfcb131a6481e
+EOF
           yes 2>/dev/null | sdkmanager --licenses || true # Suppress broken pipe error from 'yes'
 
       - name: Install Android SDK Packages
@@ -154,6 +155,17 @@ jobs:
           fi
           # Ensure buildozer.log exists even if build fails
           [ -f buildozer.log ] || touch buildozer.log
+
+      - name: Display last 500 lines of Buildozer Log
+        if: always()
+        run: |
+          if [ -f buildozer.log ]; then
+            echo "--- Last 500 lines of buildozer.log ---"
+            tail -n 500 buildozer.log
+            echo "---------------------------------------"
+          else
+            echo "buildozer.log not found."
+          fi
 
       - name: Upload Buildozer Log
         if: always()
