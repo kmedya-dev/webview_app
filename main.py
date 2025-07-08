@@ -1,41 +1,36 @@
 from kivy.app import App
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.button import Button
-from kivy.uix.webview import WebView
 from kivy.utils import platform
 import os
 
-from jnius import autoclass
+# Import Kivy Garden WebView
+try:
+    from kivy_garden.webview import WebView
+    WEBVIEW_AVAILABLE = True
+except ImportError:
+    WEBVIEW_AVAILABLE = False
+    print("WebView not available - install kivy-garden.webview")
 
-# Android specific imports for native WebView control
-WebView = autoclass('android.webkit.WebView')
-WebViewClient = autoclass('android.webkit.WebViewClient')
-WebSettings = autoclass('android.webkit.WebSettings')
-PythonActivity = autoclass('org.kivy.android.PythonActivity')
+# Android specific imports - only load on Android
+ANDROID_AVAILABLE = False
+if platform == 'android':
+    try:
+        from jnius import autoclass
+        AndroidWebView = autoclass('android.webkit.WebView')
+        WebViewClient = autoclass('android.webkit.WebViewClient')
+        WebSettings = autoclass('android.webkit.WebSettings')
+        PythonActivity = autoclass('org.kivy.android.PythonActivity')
+        ANDROID_AVAILABLE = True
+    except ImportError:
+        print("Android WebView APIs not available")
 
 class WebViewApp(App):
     def build(self):
         self.title = 'ErudaBrowser'
         layout = BoxLayout(orientation='vertical')
 
-        # Load local HTML (your custom index.html with JS-based navigation)
-        # For Android, assets are typically accessed via 'file:///android_asset/'
-        # For local testing on desktop, you might need a simple HTTP server
-        local_html_path = 'file:///android_asset/index.html'
-
-        # Create native Android WebView instance
-        self.android_webview = WebView(PythonActivity.mActivity)
-        settings = self.android_webview.getSettings()
-        settings.setJavaScriptEnabled(True) # Ensure JS is enabled by default
-
-        # Store default user agent and define a custom one
-        self.default_user_agent = settings.getUserAgentString()
-        self.custom_user_agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.127 Safari/537.36" # Example desktop UA
-
-        settings.setWebViewClient(WebViewClient())
-        self.android_webview.loadUrl(local_html_path)
-
-        # Add custom buttons for DevTools
+        # Create button bar first
         button_bar = BoxLayout(size_hint_y=None, height='48dp')
 
         devtools_btn = Button(text="DevTools")
@@ -52,28 +47,80 @@ class WebViewApp(App):
         button_bar.add_widget(toggle_ua_btn)
 
         layout.add_widget(button_bar)
-        layout.add_widget(self.android_webview) # Add the native Android WebView to the layout
+
+        # Create WebView based on platform
+        if platform == 'android' and ANDROID_AVAILABLE:
+            self.setup_android_webview(layout)
+        elif WEBVIEW_AVAILABLE:
+            self.setup_kivy_webview(layout)
+        else:
+            # Fallback - show error button
+            error_btn = Button(text="WebView not available - check requirements")
+            layout.add_widget(error_btn)
 
         return layout
 
+    def setup_android_webview(self, layout):
+        """Setup native Android WebView"""
+        # Local HTML path for Android
+        local_html_path = 'file:///android_asset/index.html'
+
+        # Create native Android WebView instance
+        self.webview = AndroidWebView(PythonActivity.mActivity)
+        settings = self.webview.getSettings()
+        settings.setJavaScriptEnabled(True)
+
+        # Store user agents
+        self.default_user_agent = settings.getUserAgentString()
+        self.custom_user_agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.127 Safari/537.36"
+
+        settings.setWebViewClient(WebViewClient())
+        self.webview.loadUrl(local_html_path)
+
+        layout.add_widget(self.webview)
+
+    def setup_kivy_webview(self, layout):
+        """Setup Kivy Garden WebView"""
+        # For desktop/other platforms, use a URL
+        html_url = 'file://' + os.path.join(os.getcwd(), 'assets', 'index.html')
+        
+        self.webview = WebView(url=html_url)
+        layout.add_widget(self.webview)
+
     def open_devtools(self, instance):
-        # Execute JavaScript to toggle Eruda DevTools
-        self.android_webview.evaluateJavascript('eruda.toggle();', None)
+        """Toggle Eruda DevTools"""
+        if hasattr(self, 'webview'):
+            if platform == 'android' and ANDROID_AVAILABLE:
+                # Android WebView
+                self.webview.evaluateJavascript('eruda.toggle();', None)
+            elif WEBVIEW_AVAILABLE:
+                # Kivy WebView - execute JavaScript
+                self.webview.evaluate_js('eruda.toggle();')
 
     def toggle_js(self, instance):
-        current = self.android_webview.getSettings().getJavaScriptEnabled()
-        self.android_webview.getSettings().setJavaScriptEnabled(not current)
-        print(f"JavaScript is now: {self.android_webview.getSettings().getJavaScriptEnabled()}")
-        # Reload the current URL to apply changes
-        self.android_webview.reload()
+        """Toggle JavaScript (Android only)"""
+        if platform == 'android' and ANDROID_AVAILABLE and hasattr(self, 'webview'):
+            current = self.webview.getSettings().getJavaScriptEnabled()
+            self.webview.getSettings().setJavaScriptEnabled(not current)
+            print(f"JavaScript is now: {self.webview.getSettings().getJavaScriptEnabled()}")
+            self.webview.reload()
+        else:
+            print("JavaScript toggle only available on Android")
 
     def toggle_user_agent(self, instance):
-        settings = self.android_webview.getSettings()
-        current_ua = settings.getUserAgentString()
-        if current_ua == self.default_user_agent:
-            settings.setUserAgentString(self.custom_user_agent)
-            print(f"User Agent set to custom: {self.custom_user_agent}")
+        """Toggle User Agent (Android only)"""
+        if platform == 'android' and ANDROID_AVAILABLE and hasattr(self, 'webview'):
+            settings = self.webview.getSettings()
+            current_ua = settings.getUserAgentString()
+            if current_ua == self.default_user_agent:
+                settings.setUserAgentString(self.custom_user_agent)
+                print(f"User Agent set to custom: {self.custom_user_agent}")
+            else:
+                settings.setUserAgentString(self.default_user_agent)
+                print(f"User Agent set to default: {self.default_user_agent}")
+            self.webview.reload()
         else:
-            settings.setUserAgentString(self.default_user_agent)
-            print(f"User Agent set to default: {self.default_user_agent}")
-        self.android_webview.reload() # Reload to apply UA change
+            print("User Agent toggle only available on Android")
+
+if __name__ == '__main__':
+    WebViewApp().run()
