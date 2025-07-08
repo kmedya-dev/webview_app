@@ -454,7 +454,7 @@ tests/*
 INTERNET
 
 [app:requirements@demo]
-python3,kivy,kivy-garden.webview,pysdl2,openssl
+python,kivy,kivy-garden.webview,pysdl2,openssl,zlib
 
 [app:android.compile_options@demo]
 -DOPENSSL_NO_SSL3

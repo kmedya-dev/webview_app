@@ -1,7 +1,7 @@
 
 {
     "name": "ErudaBrowser",
-    "version": "0.1.0",
+    "version": "3.12",
     "description": "A lightweight, 100% Java-free WebView browser app with Eruda console log support.",
     "permissions": [
         "INTERNET"
