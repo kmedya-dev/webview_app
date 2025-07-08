@@ -1,5 +1,6 @@
 buildozer>=1.5.0
 cython>=0.29.33
+setuptools>=60.0.0
 appdirs
 packaging
 colorama
