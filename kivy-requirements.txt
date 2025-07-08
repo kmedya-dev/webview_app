@@ -2,5 +2,5 @@
 #python
 kivy
 #kivy-garden.webview
-pysdl2
-openssl
+#pysdl2
+#openssl
