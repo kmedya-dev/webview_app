@@ -157,12 +157,12 @@ jobs:
 
               print(f"Updated {spec_file} with requirements from {requirements_file}.")
 
-      if __name__ == "__main__":
-          update_buildozer_requirements(
-              "libytool-requirements.txt",
-              "buildozer.spec"
-          )
-    EOF
+          if __name__ == "__main__":
+              update_buildozer_requirements(
+                  "libytool-requirements.txt",
+                  "buildozer.spec"
+              )
+          EOF
       
       - name: Run Python script to update buildozer.spec
         run: python update_requirements.py
