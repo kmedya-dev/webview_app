@@ -124,7 +124,7 @@ jobs:
           echo "grp" >> libytool-requirements.txt
           
       - name: Create update_requirements.py
-            run: |
+        run: |
           cat << 'EOF' > update_requirements.py
           import re
 
@@ -132,7 +132,7 @@ jobs:
               with open(requirements_file, 'r') as f:
                   extra_requirements = [line.strip() for line in f if line.strip()]
 
-   extra_req_string = ",".join(extra_requirements)
+                  extra_req_string = ",".join(extra_requirements)
 
               with open(spec_file, 'r') as f:
                   spec_content = f.readlines()
@@ -156,15 +156,13 @@ jobs:
                   f.writelines(new_spec_content)
 
               print(f"Updated {spec_file} with requirements from {requirements_file}.")
-
-<<<<<<< HEAD
+              
           if __name__ == "__main__":
               update_buildozer_requirements(
                   "libytool-requirements.txt",
                   "buildozer.spec"
               )
-    EOF
->>>>>>> d0b34592818b8e8259b1b5638d8fa3f6f20a71bf
+              EOF
       
       - name: Run Python script to update buildozer.spec
         run: python update_requirements.py
