@@ -1,5 +1,0 @@
-openssl
-zlib
-libid
-liblzma
-grp

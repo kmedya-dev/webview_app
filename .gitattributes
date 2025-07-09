@@ -1,0 +1,17 @@
+# Force Unix-style line endings
+* text=auto eol=lf
+
+# Handle Python files
+*.py text diff=python
+
+# Treat Kivy .kv files as text
+*.kv text
+
+# Ignore binary files for diffs
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.apk binary
+
+# Always include .gitattributes
+.gitattributes text
