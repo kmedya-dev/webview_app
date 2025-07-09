@@ -77,3 +77,4 @@ secrets.json
 *.bak
 *.backup
 *.orig
+keystore.b64.txt
