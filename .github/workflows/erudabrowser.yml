@@ -129,26 +129,36 @@ jobs:
           ln -sfn $ANDROID_SDK_ROOT/build-tools ~/.buildozer/android/platform/android-sdk/build-tools
           ln -sfn $ANDROID_SDK_ROOT/cmdline-tools/latest ~/.buildozer/android/platform/android-sdk/tools    
 
-     # --- Build Execution & Log Capture ---       
+     # --- Build Execution & Log Capture ---
       - name: Build Debug APK
         run: |
-    echo "🚀 Starting Buildozer Debug Build for profile: ${{ env.PROFILE }}"
-    touch buildozer_log.txt
-    if [ -f update_requirements.py ]; then
-      echo "📦 Updating requirements with update_requirements.py"
-      python update_requirements.py "${{ env.PROFILE }}"
-    fi
-    echo "🛠️ Running Buildozer..."
-    buildozer android debug 2>&1 | tee buildozer_log.txt || echo "❌ Build failed, but log captured."
-    echo "✅ Build step completed (even if with errors)."
+          echo "🚀 Starting Buildozer Debug Build for profile: ${{ env.PROFILE }}"
+          touch buildozer_log.txt
+          if [ -f update_requirements.py ]; then
+            echo "📦 Updating requirements with update_requirements.py"
+            python update_requirements.py "${{ env.PROFILE }}"
+          fi
+          echo "🛠️ Running Buildozer..."
+          buildozer android debug 2>&1 | tee buildozer_log.txt || echo "❌ Build failed, but log captured."
+          echo "✅ Build step completed (even if with errors)."
 
-# --- Upload Buildozer Log File as Artifact ---
-    - name: Upload Buildozer Log Artifact
-  if: always()
-  uses: actions/upload-artifact@v4
-  with:
-    name: buildozer-log-${{ env.PROFILE }}
-    path: buildozer_log.txt
+      - name: Display last 500 lines of Buildozer Log
+        if: always()
+        run: |
+          if [ -f buildozer_log.txt ]; then
+            echo "--- Last 500 lines of buildozer_log.txt ---"
+            tail -n 500 buildozer_log.txt
+            echo "---------------------------------------"
+          else
+            echo "buildozer_log.txt not found."
+          fi
+
+      - name: Upload Buildozer Log Artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: buildozer-log-${{ env.PROFILE }}
+          path: buildozer_log.txt
       
       - name: Find and Standardize Debug APK Name
         run: |
@@ -195,7 +205,7 @@ jobs:
             python update_requirements.py "default" # Release builds always use the default profile
           fi
           # Build the unsigned release APK if signing secrets are available.
-          buildozer android release 2>&1 | tee -a buildozer.log # Append to log
+          buildozer android release 2>&1 | tee -a buildozer_log.txt # Append to log
 
       - name: Sign and Zipalign Release APK (if signing enabled)
         if: steps.signing_check.outputs.signing_enabled == 'true'

@@ -36,8 +36,6 @@ version = 3.12
 # comma separated e.g. requirements = sqlite3,kivy
 requirements = python,kivy,webview-android,pywebview,pysdl2,openssl,zlib
 android.compile_options = -DOPENSSL_NO_SSL3
-android.copy_libs = 1
-
 
 
 # (str) Custom source folders for requirements
@@ -120,8 +118,10 @@ android.ndk = 25b
 #android.private_storage = True
 
 # (str) Android NDK directory (if empty, it will be automatically downloaded.)
-# android.ndk_path = /home/runner/android-ndk-r25b # Handled by CI/CD environment variable ANDROID_NDK_HOME
+android.ndk_path = /home/runner/android-ndk-r25b # Handled by CI/CD environment variable ANDROID_NDK_HOME
 
+# (bool) Copy library instead of making a libpymodules.so
+android.copy_libs = 1
 
 # (str) Android SDK directory (if empty, it will be automatically downloaded.)
 #android.sdk_path =
@@ -279,8 +279,7 @@ android.enable_androidx = True
 # (str) Android additional adb arguments
 #android.adb_args = -H host.docker.internal
 
-# (bool) Copy library instead of making a libpymodules.so
-android.copy_libs = 1
+
 
 # (list) The Android archs to build for, choices: armeabi-v7a, arm64-v8a, x86, x86_64
 # In past, was `android.arch` as we weren't supporting builds for multiple archs at the same time.
