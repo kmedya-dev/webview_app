@@ -59,7 +59,7 @@ jobs:
           pip install --upgrade pip setuptools wheel
           pip install buildozer>=1.5.0 cython==0.29.36 virtualenv setuptools>=60.0.0
           pip install kivy-garden
-          garden install webview
+          python -m kivy_garden.garden install webview
           pip install "kivy[base]" --extra-index-url https://kivy.org/downloads/simple/
 
       - name: Setup Android SDK
