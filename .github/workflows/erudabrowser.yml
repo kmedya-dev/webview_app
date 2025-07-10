@@ -146,17 +146,6 @@ jobs:
           buildozer android debug 2>&1 | tee buildozer_log.txt || echo "❌ Build failed, but log captured."
           echo "✅ Build step completed (even if with errors)."
 
-      - name: Display last 500 lines of Buildozer Log
-        if: always()
-        run: |
-          if [ -f buildozer_log.txt ]; then
-            echo "--- Last 500 lines of buildozer_log.txt ---"
-            tail -n 500 buildozer_log.txt
-            echo "---------------------------------------"
-          else
-            echo "buildozer_log.txt not found."
-          fi
-
       - name: Upload Buildozer Log Artifact
         if: always()
         uses: actions/upload-artifact@v4
