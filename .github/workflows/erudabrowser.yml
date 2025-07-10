@@ -64,7 +64,7 @@ jobs:
       - name: Install Kivy Garden Packages
         run: |
           echo "[+] Installing kivy-garden..."
-          pip install kivy-garden
+          python -m pip install --no-cache-dir kivy-garden
 
           echo "[+] Installing garden.webview..."
           python -m kivy_garden.garden install webview
