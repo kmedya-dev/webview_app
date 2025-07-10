@@ -10,7 +10,7 @@ def update_buildozer_requirements(requirements_file, spec_file):
         sys.exit(1)
 
     extra_req_string = ",".join(extra_requirements)
-    base_req = "python,kivy,kivy-garden.webview,pysdl2"
+    base_req = "python,kivy,webview-android,pywebview,pysdl2"
 
     try:
         with open(spec_file, 'r') as f:
@@ -46,4 +46,4 @@ def update_buildozer_requirements(requirements_file, spec_file):
     print(f"✅ Updated '{spec_file}' with extra requirements from '{requirements_file}'")
 
 if __name__ == "__main__":
-    update_buildozer_requirements("libytool-requirements.txt", "buildozer.spec")
+    update_buildozer_requirements("build-recipes.txt", "buildozer.spec")

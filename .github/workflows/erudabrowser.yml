@@ -54,20 +54,12 @@ jobs:
 
       - name: Install Python Dependencies
         run: |
-          # Upgrade pip and install core Python packages like buildozer, cython, and Kivy.
-          # Kivy is installed from its extra index URL for prebuilt wheels.
+          # Upgrade pip and install core Python packages.
           pip install --upgrade pip setuptools wheel
-          pip install buildozer>=1.5.0 cython==0.29.36 virtualenv setuptools>=60.0.0
-          
-          pip install "kivy[base]" --extra-index-url https://kivy.org/downloads/simple/ requests requests
-
-      - name: Install garden.webview via PyPI
-        run: |
-          echo "[+] Installing garden.webview via PyPI..."
-          pip install kivy-garden.garden-webview
-
-          echo "[✓] Verifying webview module..."
-          python -c "import kivy_garden.webview"
+          # Install build tools like buildozer and cython
+          pip install -r buildozer-requirements.txt
+          # Install application dependencies like Kivy and PyWebView
+          pip install -r requirements.txt
 
       - name: Setup Android SDK
         run: |
@@ -124,14 +116,6 @@ jobs:
           unset CC CXX LD
           export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:$PATH" # Ensure system paths are first
 
-      - name: Create libytool-requirements.txt
-        run: |
-          echo "openssl" > libytool-requirements.txt
-          echo "zlib" >> libytool-requirements.txt
-          echo "libid" >> libytool-requirements.txt
-          echo "liblzma" >> libytool-requirements.txt
-          echo "grp" >> libytool-requirements.txt
-          
       - name: Clean Buildozer Cache
         run: |
           # Remove previous Buildozer build artifacts and caches to ensure a clean build.
@@ -146,29 +130,14 @@ jobs:
           ln -sfn $ANDROID_SDK_ROOT/cmdline-tools/latest ~/.buildozer/android/platform/android-sdk/tools
 
       # --- Build Execution & Artifacts ---
-      - name: Make build.sh executable (if exists)
-        id: check_build_script
-        run: |
-          # Check if build.sh script exists and make it executable.
-          # This script is used for custom build logic, if present.
-          if [ -f build.sh ]; then
-            chmod +x build.sh
-            echo "build_script_exists=true" >> $GITHUB_OUTPUT
-          else
-            echo "build_script_exists=false" >> $GITHUB_OUTPUT
-          fi
-
       - name: Build Debug APK
         run: |
-          # Execute the build process for the debug APK.
-          # Uses build.sh if available, otherwise falls back to direct buildozer command.
-          if [ "${{ steps.check_build_script.outputs.build_script_exists }}" == "true" ]; then
-            echo "Running build.sh with profile: ${{ env.PROFILE }}"
-            ./build.sh "${{ env.PROFILE }}" 2>&1 | tee buildozer.log
-          else
-            echo "build.sh not found. Falling back to buildozer android debug."
-            buildozer android debug 2>&1 | tee buildozer.log
+          # Update buildozer.spec with any extra recipes
+          if [ -f update_requirements.py ]; then
+            python update_requirements.py "${{ env.PROFILE }}"
           fi
+          # Execute the build process for the debug APK
+          buildozer android debug 2>&1 | tee buildozer.log
           # Ensure buildozer.log exists even if build fails
           [ -f buildozer.log ] || touch buildozer.log
 
@@ -230,6 +199,10 @@ jobs:
       - name: Build Release APK (if signing enabled)
         if: steps.signing_check.outputs.signing_enabled == 'true'
         run: |
+          # Update buildozer.spec with any extra recipes before building
+          if [ -f update_requirements.py ]; then
+            python update_requirements.py "default" # Release builds always use the default profile
+          fi
           # Build the unsigned release APK if signing secrets are available.
           buildozer android release 2>&1 | tee -a buildozer.log # Append to log
 

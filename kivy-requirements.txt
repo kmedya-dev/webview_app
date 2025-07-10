@@ -1,4 +1,0 @@
-kivy
-kivy-garden
-kivy-garden.webview
-pysdl2

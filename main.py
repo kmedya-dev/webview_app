@@ -1,140 +1,100 @@
+import os
+import threading
 from kivy.app import App
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.button import Button
+from kivy.uix.label import Label
 from kivy.utils import platform
-import os
 
-# Import Kivy Garden WebView
-try:
-    from kivy_garden.webview import WebView
-    WEBVIEW_AVAILABLE = True
-except ImportError:
-    WEBVIEW_AVAILABLE = False
-    print("WebView not available - install kivy-garden.webview")
+# --- Platform-specific WebView Implementation ---
 
-# Android specific imports - only load on Android
-ANDROID_AVAILABLE = False
-if platform == 'android':
+IS_ANDROID = platform == 'android'
+WEBVIEW_AVAILABLE = False
+
+# Android: Use webview-android
+if IS_ANDROID:
     try:
-        from jnius import autoclass
-        AndroidWebView = autoclass('android.webkit.WebView')
-        WebViewClient = autoclass('android.webkit.WebViewClient')
-        WebSettings = autoclass('android.webkit.WebSettings')
-        PythonActivity = autoclass('org.kivy.android.PythonActivity')
-        ANDROID_AVAILABLE = True
+        from android_webview import AndroidWebView
+        WEBVIEW_AVAILABLE = True
     except ImportError:
-        print("Android WebView APIs not available")
+        print("Android WebView not available. Please ensure 'webview-android' is in your requirements.")
+
+# Desktop: Use pywebview
+else:
+    try:
+        import webview
+        WEBVIEW_AVAILABLE = True
+    except ImportError:
+        print("pywebview not available. Please run 'pip install pywebview'.")
+
 
 class WebViewApp(App):
     def build(self):
         self.title = 'ErudaBrowser'
         layout = BoxLayout(orientation='vertical')
 
-        # Create button bar first
-        button_bar = BoxLayout(size_hint_y=None, height='48dp')
+        if not WEBVIEW_AVAILABLE:
+            return Label(text="WebView component is not available on this platform. Check logs.")
 
-        devtools_btn = Button(text="DevTools")
-        devtools_btn.bind(on_release=self.open_devtools)
+        # --- Android Implementation ---
+        if IS_ANDROID:
+            self.webview = AndroidWebView()
+            
+            # Create Android-specific button bar
+            button_bar = BoxLayout(size_hint_y=None, height='48dp')
+            devtools_btn = Button(text="DevTools")
+            devtools_btn.bind(on_release=self.open_devtools)
+            button_bar.add_widget(devtools_btn)
+            
+            layout.add_widget(button_bar)
+            layout.add_widget(self.webview)
 
-        toggle_js_btn = Button(text="Toggle JS")
-        toggle_js_btn.bind(on_release=self.toggle_js)
-
-        toggle_ua_btn = Button(text="Toggle UA")
-        toggle_ua_btn.bind(on_release=self.toggle_user_agent)
-
-        button_bar.add_widget(devtools_btn)
-        button_bar.add_widget(toggle_js_btn)
-        button_bar.add_widget(toggle_ua_btn)
-
-        layout.add_widget(button_bar)
-
-        # Create WebView based on platform
-        if platform == 'android' and ANDROID_AVAILABLE:
-            self.setup_android_webview(layout)
-        elif WEBVIEW_AVAILABLE:
-            self.setup_kivy_webview(layout)
+        # --- Desktop (pywebview) Implementation ---
         else:
-            # Fallback - show error button
-            error_btn = Button(text="WebView not available - check requirements")
-            layout.add_widget(error_btn)
+            info_label = Label(
+                text="The browser will open in a separate window.\nClose this window to exit the application.",
+                halign="center"
+            )
+            launch_btn = Button(text="Launch Browser Window", size_hint_y=None, height='48dp')
+            launch_btn.bind(on_release=self.launch_desktop_webview)
+            layout.add_widget(info_label)
+            layout.add_widget(launch_btn)
 
         return layout
 
-    def setup_android_webview(self, layout):
-        """Setup native Android WebView"""
-        # Local HTML path for Android
-        local_html_path = 'file:///android_asset/index.html'
+    def on_start(self):
+        """Load the URL after the app starts, especially for Android."""
+        if IS_ANDROID and hasattr(self, 'webview'):
+            # For Android, assets are bundled. The path is relative to the app's assets directory.
+            local_html_path = 'file:///android_asset/index.html'
+            self.webview.load_url(local_html_path)
 
-        # Create native Android WebView instance
-        self.webview = AndroidWebView(PythonActivity.mActivity)
-        settings = self.webview.getSettings()
-        settings.setJavaScriptEnabled(True)
-
-        # Store user agents
-        self.default_user_agent = settings.getUserAgentString()
-        self.custom_user_agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.127 Safari/537.36"
-
-        settings.setWebViewClient(WebViewClient())
-        self.webview.loadUrl(local_html_path)
-
-        layout.add_widget(self.webview)
-
-    def setup_kivy_webview(self, layout):
-        """Setup Kivy Garden WebView"""
-        # For desktop/other platforms, use a URL
-        html_url = 'file://' + os.path.join(os.getcwd(), 'assets', 'index.html')
-        
-        try:
-            self.webview = WebView(url=html_url)
-            layout.add_widget(self.webview)
-        except Exception as e:
-            # Fallback: create a simple label with instructions
-            from kivy.uix.label import Label
-            fallback_label = Label(
-                text=f'WebView unavailable: {str(e)}\n\n' +
-                     'For full functionality, install:\n' +
-                     'pip install kivy-garden.webview\n\n' +
-                     'Or run on Android device.',
-                text_size=(None, None),
-                halign='center',
-                valign='middle'
+    def launch_desktop_webview(self, instance):
+        """Launch pywebview in a separate thread."""
+        if not IS_ANDROID:
+            instance.disabled = True
+            instance.text = "Browser is running..."
+            # For desktop, use a relative path to the HTML file
+            html_url = 'file://' + os.path.join(os.getcwd(), 'assets', 'index.html')
+            
+            # Run pywebview in a separate thread so it doesn't block the Kivy event loop
+            webview_thread = threading.Thread(
+                target=webview.create_window,
+                args=('ErudaBrowser - Desktop', html_url),
+                kwargs={'width': 1200, 'height': 800}
             )
-            layout.add_widget(fallback_label)
+            webview_thread.start()
 
     def open_devtools(self, instance):
-        """Toggle Eruda DevTools"""
-        if hasattr(self, 'webview'):
-            if platform == 'android' and ANDROID_AVAILABLE:
-                # Android WebView
-                self.webview.evaluateJavascript('eruda.toggle();', None)
-            elif WEBVIEW_AVAILABLE:
-                # Kivy WebView - execute JavaScript
-                self.webview.evaluate_js('eruda.toggle();')
+        """Toggle Eruda DevTools (Android only)."""
+        if IS_ANDROID and hasattr(self, 'webview'):
+            self.webview.evaluate_javascript('eruda.toggle();')
 
-    def toggle_js(self, instance):
-        """Toggle JavaScript (Android only)"""
-        if platform == 'android' and ANDROID_AVAILABLE and hasattr(self, 'webview'):
-            current = self.webview.getSettings().getJavaScriptEnabled()
-            self.webview.getSettings().setJavaScriptEnabled(not current)
-            print(f"JavaScript is now: {self.webview.getSettings().getJavaScriptEnabled()}")
-            self.webview.reload()
-        else:
-            print("JavaScript toggle only available on Android")
-
-    def toggle_user_agent(self, instance):
-        """Toggle User Agent (Android only)"""
-        if platform == 'android' and ANDROID_AVAILABLE and hasattr(self, 'webview'):
-            settings = self.webview.getSettings()
-            current_ua = settings.getUserAgentString()
-            if current_ua == self.default_user_agent:
-                settings.setUserAgentString(self.custom_user_agent)
-                print(f"User Agent set to custom: {self.custom_user_agent}")
-            else:
-                settings.setUserAgentString(self.default_user_agent)
-                print(f"User Agent set to default: {self.default_user_agent}")
-            self.webview.reload()
-        else:
-            print("User Agent toggle only available on Android")
+    def on_stop(self):
+        """Clean up resources."""
+        if not IS_ANDROID and webview.active:
+             # pywebview manages its own lifecycle when the window is closed.
+             pass
 
 if __name__ == '__main__':
     WebViewApp().run()

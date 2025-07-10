@@ -65,6 +65,7 @@ secrets.json
 .env
 keystore.b64.txt
 local.properties
+webview_app-release-key.keystore
 
 # ----------------------------
 # 💻 Virtual Environments
@@ -100,8 +101,8 @@ gradle/
 # ----------------------------
 # 🧩 Custom Dev Requirements
 # ----------------------------
-requirements.txt
-libytool-requirements.txt
+#requirements.txt
+#libytool-requirements.txt
 
 # ⬇️ Force include this .gitignore file
 !.gitignore
