@@ -59,7 +59,7 @@ jobs:
           pip install --upgrade pip setuptools wheel
           pip install buildozer>=1.5.0 cython==0.29.36 virtualenv setuptools>=60.0.0
           
-          pip install "kivy[base]" --extra-index-url https://kivy.org/downloads/simple/
+          pip install "kivy[base]" --extra-index-url https://kivy.org/downloads/simple/ requests requests
 
       - name: Install Kivy Garden Packages
         run: |

@@ -101,7 +101,7 @@ gradle/
 # 🧩 Custom Dev Requirements
 # ----------------------------
 requirements.txt
-libytool-requirements.txt
+#libytool-requirements.txt
 
 # ⬇️ Force include this .gitignore file
 !.gitignore
