@@ -141,9 +141,9 @@ jobs:
       - name: Build Debug APK
         run: |
           echo "🚀 Starting Buildozer Debug Build for profile: ${{ env.PROFILE }}"
-          touch buildozer_log.txt
+          touch buildozer.log
           # Execute the build process for the debug APK
-          buildozer android debug 2>&1 | tee buildozer_log.txt || echo "❌ Build failed, but log captured."
+          buildozer android debug 2>&1 | tee buildozer.log || echo "❌ Build failed, but log captured."
           echo "✅ Build step completed (even if with errors)."
 
       - name: Upload Buildozer Log Artifact
@@ -151,7 +151,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: buildozer-log-${{ env.PROFILE }}
-          path: buildozer_log.txt
+          path: buildozer.log
       
       - name: Find and Standardize Debug APK Name
         run: |
@@ -198,7 +198,7 @@ jobs:
             python update_requirements.py "default" # Release builds always use the default profile
           fi
           # Build the unsigned release APK if signing secrets are available.
-          buildozer android release 2>&1 | tee -a buildozer_log.txt # Append to log
+          buildozer android release 2>&1 | tee -a buildozer.log # Append to log
 
       - name: Sign and Zipalign Release APK (if signing enabled)
         if: steps.signing_check.outputs.signing_enabled == 'true'

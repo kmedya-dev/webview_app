@@ -11,46 +11,32 @@ from kivy.utils import platform
 IS_ANDROID = platform == 'android'
 WEBVIEW_AVAILABLE = False
 
-# Android: Use webview-android
-if IS_ANDROID:
-    try:
-        from android_webview import AndroidWebView
-        WEBVIEW_AVAILABLE = True
-    except ImportError:
-        print("Android WebView not available. Please ensure 'webview-android' is in your requirements.")
-
-# Desktop: Use pywebview
-else:
-    try:
-        import webview
-        WEBVIEW_AVAILABLE = True
-    except ImportError:
-        print("pywebview not available. Please run 'pip install pywebview'.")
-
+from jnius import autoclass
+from android.runnable import run_on_ui_thread
 
 class WebViewApp(App):
     def build(self):
         self.title = 'ErudaBrowser'
         layout = BoxLayout(orientation='vertical')
 
-        if not WEBVIEW_AVAILABLE:
-            return Label(text="WebView component is not available on this platform. Check logs.")
-
-        # --- Android Implementation ---
+        # Android Implementation using pyjnius
         if IS_ANDROID:
-            self.webview = AndroidWebView()
-            
-            # Create Android-specific button bar
+            self.webview_java = autoclass('android.webkit.WebView')(activity)
+            self.webview_java.getSettings().setJavaScriptEnabled(True)
+            self.webview_java.setWebViewClient(autoclass('android.webkit.WebViewClient')())
+            activity.setContentView(self.webview_java)
+            self.webview_java.loadUrl('file:///android_asset/index.html')
+
             button_bar = BoxLayout(size_hint_y=None, height='48dp')
             devtools_btn = Button(text="DevTools")
             devtools_btn.bind(on_release=self.open_devtools)
             button_bar.add_widget(devtools_btn)
             
             layout.add_widget(button_bar)
-            layout.add_widget(self.webview)
 
-        # --- Desktop (pywebview) Implementation ---
+        # Desktop (pywebview) Implementation
         else:
+            import webview
             info_label = Label(
                 text="The browser will open in a separate window.\nClose this window to exit the application.",
                 halign="center"
@@ -63,21 +49,20 @@ class WebViewApp(App):
         return layout
 
     def on_start(self):
-        """Load the URL after the app starts, especially for Android."""
-        if IS_ANDROID and hasattr(self, 'webview'):
-            # For Android, assets are bundled. The path is relative to the app's assets directory.
-            local_html_path = 'file:///android_asset/index.html'
-            self.webview.load_url(local_html_path)
+        # No specific on_start logic needed for Android with pyjnius as WebView is set up in build
+        pass
+
+    @run_on_ui_thread
+    def open_devtools(self, instance):
+        if IS_ANDROID and hasattr(self, 'webview_java'):
+            self.webview_java.evaluateJavascript('eruda.toggle();', None)
 
     def launch_desktop_webview(self, instance):
-        """Launch pywebview in a separate thread."""
         if not IS_ANDROID:
             instance.disabled = True
             instance.text = "Browser is running..."
-            # For desktop, use a relative path to the HTML file
             html_url = 'file://' + os.path.join(os.getcwd(), 'assets', 'index.html')
             
-            # Run pywebview in a separate thread so it doesn't block the Kivy event loop
             webview_thread = threading.Thread(
                 target=webview.create_window,
                 args=('ErudaBrowser - Desktop', html_url),
@@ -85,16 +70,13 @@ class WebViewApp(App):
             )
             webview_thread.start()
 
-    def open_devtools(self, instance):
-        """Toggle Eruda DevTools (Android only)."""
-        if IS_ANDROID and hasattr(self, 'webview'):
-            self.webview.evaluate_javascript('eruda.toggle();')
-
     def on_stop(self):
-        """Clean up resources."""
         if not IS_ANDROID and webview.active:
-             # pywebview manages its own lifecycle when the window is closed.
              pass
 
 if __name__ == '__main__':
+    from kivy.utils import platform
+    IS_ANDROID = platform == 'android'
+    if IS_ANDROID:
+        activity = autoclass('org.kivy.android.PythonActivity').mActivity
     WebViewApp().run()
