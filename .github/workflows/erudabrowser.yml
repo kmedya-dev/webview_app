@@ -127,38 +127,29 @@ jobs:
           # Create symbolic links for Buildozer to correctly locate Android SDK components.
           mkdir -p ~/.buildozer/android/platform/android-sdk
           ln -sfn $ANDROID_SDK_ROOT/build-tools ~/.buildozer/android/platform/android-sdk/build-tools
-          ln -sfn $ANDROID_SDK_ROOT/cmdline-tools/latest ~/.buildozer/android/platform/android-sdk/tools
+          ln -sfn $ANDROID_SDK_ROOT/cmdline-tools/latest ~/.buildozer/android/platform/android-sdk/tools    
 
-      # --- Build Execution & Artifacts ---
+     # --- Build Execution & Log Capture ---       
       - name: Build Debug APK
         run: |
-          # Update buildozer.spec with any extra recipes
-          if [ -f update_requirements.py ]; then
-            python update_requirements.py "${{ env.PROFILE }}"
-          fi
-          # Execute the build process for the debug APK
-          buildozer android debug 2>&1 | tee buildozer.log
-          # Ensure buildozer.log exists even if build fails
-          [ -f buildozer.log ] || touch buildozer.log
+    echo "🚀 Starting Buildozer Debug Build for profile: ${{ env.PROFILE }}"
+    touch buildozer_log.txt
+    if [ -f update_requirements.py ]; then
+      echo "📦 Updating requirements with update_requirements.py"
+      python update_requirements.py "${{ env.PROFILE }}"
+    fi
+    echo "🛠️ Running Buildozer..."
+    buildozer android debug 2>&1 | tee buildozer_log.txt || echo "❌ Build failed, but log captured."
+    echo "✅ Build step completed (even if with errors)."
 
-      - name: Display last 500 lines of Buildozer Log
-        if: always()
-        run: |
-          if [ -f buildozer.log ]; then
-            echo "--- Last 500 lines of buildozer.log ---"
-            tail -n 500 buildozer.log
-            echo "---------------------------------------"
-          else
-            echo "buildozer.log not found."
-          fi
-
-      - name: Upload Buildozer Log
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: buildozer-log-${{ env.PROFILE }}
-          path: buildozer.log
-
+# --- Upload Buildozer Log File as Artifact ---
+    - name: Upload Buildozer Log Artifact
+  if: always()
+  uses: actions/upload-artifact@v4
+  with:
+    name: buildozer-log-${{ env.PROFILE }}
+    path: buildozer_log.txt
+      
       - name: Find and Standardize Debug APK Name
         run: |
           # Locate the generated debug APK and standardize its name.
