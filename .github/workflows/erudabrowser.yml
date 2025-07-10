@@ -61,13 +61,10 @@ jobs:
           
           pip install "kivy[base]" --extra-index-url https://kivy.org/downloads/simple/ requests requests
 
-      - name: Install Kivy Garden Packages
+      - name: Install Kivy Garden WebView (manual)
         run: |
-          echo "[+] Installing kivy-garden..."
-          python -m pip install --no-cache-dir kivy-garden
-
-          echo "[+] Installing garden.webview..."
-          python -m kivy_garden.garden install webview
+          echo "[+] Installing garden.webview manually..."
+          pip install "https://github.com/kivy-garden/garden.webview/archive/master.zip"
 
           echo "[✓] Verifying webview module..."
           python -c "import kivy_garden.webview"
