@@ -134,11 +134,7 @@ jobs:
         run: |
           echo "🚀 Starting Buildozer Debug Build for profile: ${{ env.PROFILE }}"
           touch buildozer_log.txt
-          if [ -f update_requirements.py ]; then
-            echo "📦 Updating requirements with update_requirements.py"
-            python update_requirements.py "${{ env.PROFILE }}"
-          fi
-          echo "🛠️ Running Buildozer..."
+          # Execute the build process for the debug APK
           buildozer android debug 2>&1 | tee buildozer_log.txt || echo "❌ Build failed, but log captured."
           echo "✅ Build step completed (even if with errors)."
 

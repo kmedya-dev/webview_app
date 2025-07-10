@@ -24,11 +24,7 @@ pip install -r requirements.txt
 
 
 
-# --- Update buildozer.spec requirements if needed ---
-if [ -f update_requirements.py ]; then
-  log "⚙️ Running update_requirements.py..."
-  python update_requirements.py "$PROFILE"
-fi
+
 
 # --- Run Buildozer Build ---
 log "🚀 Launching Buildozer with profile @$PROFILE..."

@@ -34,7 +34,7 @@ version = 3.12
 
 # (list) Application requirements
 # comma separated e.g. requirements = sqlite3,kivy
-requirements = python,kivy,webview-android,pywebview,pysdl2,openssl,zlib
+requirements = python,kivy,webview-android,pywebview,pysdl2
 android.compile_options = -DOPENSSL_NO_SSL3
 
 
