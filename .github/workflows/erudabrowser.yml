@@ -61,6 +61,11 @@ jobs:
           # Install application dependencies like Kivy and PyWebView
           pip install -r requirements.txt
 
+      - name: Install dependencies for desktop preview
+        run: |
+          pip install pywebview pyjnius
+          python -c "import webview; webview.create_window('Test', 'https://google.com')"
+
       - name: Install webview-android and pywebview
         run: |
           echo "[+] Installing webview-android and pywebview..."
