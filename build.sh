@@ -21,6 +21,9 @@ pip install -r kivy-requirements.txt
 log "📦 Installing extra Python libs..."
 pip install -r libytools-requirements.txt
 
+log "🔧 Installing libytools dependencies from libytools-requirements.txt"
+pip install -r libytools-requirements.txt
+
 # --- Install kivy-garden.webview safely ---
 log "🌱 Installing kivy-garden.webview..."
 pip install kivy-garden

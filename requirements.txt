@@ -1,7 +1,11 @@
-# Core Kivy Framework
+# ────────────────
+# 🌿 Core Framework
+# ────────────────
 kivy>=2.3.0
 
-# Essential Build Dependencies
+# ────────────────
+# ⚙️ Essential Buildozer & Python-for-Android Support
+# ────────────────
 appdirs
 packaging
 colorama>=0.3.3
@@ -9,11 +13,22 @@ jinja2
 toml
 virtualenv
 
-# Development and Testing
+# ────────────────
+# 🌐 Networking Libraries
+# ────────────────
+requests
+urllib3
+pyOpenSSL
+
+# ────────────────
+# 🧪 Development & Testing
+# ────────────────
 pytest
 pexpect
 
-# System compatibility
+# ────────────────
+# 🖥️ System Compatibility
+# ────────────────
 distlib
 filelock
 platformdirs

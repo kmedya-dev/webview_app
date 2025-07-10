@@ -2,5 +2,3 @@ kivy
 kivy-garden
 kivy-garden.webview
 pysdl2
-openssl
-requests

@@ -36,6 +36,7 @@ version = 3.12
 # comma separated e.g. requirements = sqlite3,kivy
 requirements = python,kivy,kivy-garden.webview,pysdl2,openssl,zlib
 android.compile_options = -DOPENSSL_NO_SSL3
+android.copy_libs = 1
 
 
 

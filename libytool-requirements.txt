@@ -1,2 +1,7 @@
-requests
-urllib3
+build-essential
+autoconf
+automake
+libtool
+libltdl-dev
+libssl-dev
+zlib1g-dev
