@@ -61,6 +61,14 @@ jobs:
           # Install application dependencies like Kivy and PyWebView
           pip install -r requirements.txt
 
+      - name: Install webview-android and pywebview
+        run: |
+          echo "[+] Installing webview-android and pywebview..."
+          pip install webview-android pywebview
+
+          echo "[✓] Verifying webview-android and pywebview modules..."
+          python -c "import webview_android; import pywebview"
+
       - name: Setup Android SDK
         run: |
           # Download and set up the Android SDK Command-line Tools.
