@@ -67,7 +67,7 @@ jobs:
           pip install kivy-garden
 
           echo "[+] Installing garden.webview..."
-          python -m garden install webview
+          python -m kivy_garden.garden install webview
 
           echo "[✓] Verifying webview module..."
           python -c "import kivy_garden.webview"
