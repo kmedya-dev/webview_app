@@ -66,11 +66,8 @@ jobs:
           echo "[+] Installing kivy-garden..."
           pip install kivy-garden
 
-          echo "[+] Making 'garden' executable..."
-          chmod +x $(which garden)
-
           echo "[+] Installing garden.webview..."
-          garden install webview
+          python -m garden install webview
 
           echo "[✓] Verifying webview module..."
           python -c "import kivy_garden.webview"
