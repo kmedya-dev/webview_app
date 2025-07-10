@@ -27,6 +27,12 @@ pip install -r requirements.txt
 
 
 # --- Run Buildozer Build ---
+echo "[+] Installing webview-android and pywebview..."
+pip install webview-android pywebview
+
+echo "[✓] Verifying webview-android and pywebview modules..."
+python -c "from webview import WebView; import pywebview"
+
 log "🚀 Launching Buildozer with profile @$PROFILE..."
 buildozer -v -p android $PROFILE debug
 

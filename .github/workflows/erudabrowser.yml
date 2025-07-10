@@ -67,7 +67,7 @@ jobs:
           pip install webview-android pywebview
 
           echo "[✓] Verifying webview-android and pywebview modules..."
-          python -c "import webview_android; import pywebview"
+          python -c "from webview import WebView; import pywebview"
 
       - name: Setup Android SDK
         run: |
