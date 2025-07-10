@@ -101,8 +101,7 @@
       }
     }
   </style>
-  <script src="https://cdn.jsdelivr.net/npm/eruda@3.4.3/eruda.min.js"></script>
-  <script>eruda.init();</script>
+  
 </head>
 <body class="light-theme">
 
@@ -124,6 +123,13 @@
   </div>
 
   <script>
+    // Call Android.onPageLoaded when the page finishes loading
+    document.addEventListener('DOMContentLoaded', () => {
+        if (window.Android && typeof window.Android.onPageLoaded === 'function') {
+            window.Android.onPageLoaded(window.location.href);
+        }
+    });
+
     const themeSelect = document.getElementById('theme-select');
     const body = document.body;
 
