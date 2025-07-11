@@ -1,205 +1,83 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>ErudaBrowser</title>
-  <style>
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen,
-        Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
-      margin: 0;
-      padding: 1rem;
-      transition: background-color 0.3s, color 0.3s;
-    }
-    .theme-switcher {
-      position: fixed;
-      top: 1rem;
-      right: 1rem;
-      z-index: 9999;
-    }
-    .container {
-      text-align: center;
-      padding-top: 80px;
-    }
-    h1 {
-      font-size: 2rem;
-      color: #333;
-    }
-    #search-bar {
-      display: flex;
-      justify-content: center;
-      margin-top: 20px;
-      width: 90%;
-      max-width: 600px;
-      margin-left: auto;
-      margin-right: auto;
-      border: 1px solid #ddd;
-      border-radius: 8px;
-      overflow: hidden;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-    }
-    #search-input {
-      flex-grow: 1;
-      padding: 12px 15px;
-      font-size: 1rem;
-      border: none;
-      outline: none;
-      background-color: #f8f8f8;
-    }
-    .search-button, .action-button {
-      padding: 12px 18px;
-      font-size: 1rem;
-      border: none;
-      background-color: #007bff;
-      color: white;
-      cursor: pointer;
-      transition: background-color 0.2s ease-in-out;
-      white-space: nowrap;
-    }
-    .search-button:hover, .action-button:hover {
-      background-color: #0056b3;
-    }
-    .action-button {
-      background-color: #6c757d;
-    }
-    .action-button:hover {
-      background-color: #5a6268;
-    }
-
-    /* Dark theme adjustments */
-    body.dark-theme {
-      background-color: #121212;
-      color: #ffffff;
-    }
-    body.dark-theme h1 {
-      color: #eee;
-    }
-    body.dark-theme #search-bar {
-      border-color: #555;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.3);
-    }
-    body.dark-theme #search-input {
-      background-color: #333;
-      color: #eee;
-    }
-
-    /* Media Queries for responsiveness */
-    @media (max-width: 600px) {
-      body {
-        padding: 0.5rem;
-      }
-      .container {
-        padding-top: 40px;
-      }
-      #search-bar {
-        width: 95%;
-      }
-      .search-button, .action-button {
-        padding: 10px 12px;
-        font-size: 0.9rem;
-      }
-    }
-  </style>
-  
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kivy WebView Test</title>
+    <style>
+        body { font-family: sans-serif; padding: 1rem; }
+        #container { padding: 1rem; border: 1px solid #ccc; border-radius: 8px; }
+        button { margin-top: 1rem; padding: 0.5rem 1rem; font-size: 1rem; }
+    </style>
 </head>
-<body class="light-theme">
-
-  <div class="theme-switcher">
-    <select id="theme-select">
-      <option value="light">Light</option>
-      <option value="dark">Dark</option>
-      <option value="system">System</option>
-    </select>
-  </div>
-
-  <div class="container">
-    <div id="search-bar">
-      <input type="text" id="search-input" placeholder="Enter URL or search term..." />
-      <button id="search-button" class="search-button">Go</button>
-      <button id="more-button" class="action-button">More</button>
+<body>
+    <h1>Kivy & WebView</h1>
+    <div id="container">
+        <p id="message">Welcome! This content is from the local HTML file.</p>
     </div>
-    <h1>ErudaBrowser</h1>
-  </div>
+    <button onclick="sendToPython()">Call Python from JS</button>
 
-  <script>
-    // Call Android.onPageLoaded when the page finishes loading
-    document.addEventListener('DOMContentLoaded', () => {
-        if (window.Android && typeof window.Android.onPageLoaded === 'function') {
-            window.Android.onPageLoaded(window.location.href);
+    <script>
+        // 1. Override console.log to send messages to Python
+        const originalLog = console.log;
+        console.log = function(message) {
+            originalLog.apply(console, arguments); // Keep original behavior
+            // For Android, the WebChromeClient will capture this.
+            // For pywebview, we need a specific mechanism if we want to intercept it.
+            // The most reliable way is to use the JS API.
+            if (window.pywebview && window.pywebview.api) {
+                window.pywebview.api.log_from_js(message);
+            } else if (window.Android && window.Android.logToPython) {
+                // This is a custom function we can add to our JS interface
+                window.Android.logToPython(JSON.stringify(message));
+            }
+        };
+
+        console.log("JavaScript environment is ready.");
+
+        // 2. Function for Python to call to update the DOM
+        function updateFromPython(message) {
+            document.getElementById('message').textContent = message;
+            console.log(`DOM updated by Python with message: "${message}"`);
         }
-    });
 
-    const themeSelect = document.getElementById('theme-select');
-    const body = document.body;
+        // 3. Function for Python to call to dynamically change the DOM
+        function changeDom() {
+            const container = document.getElementById('container');
+            const newElement = document.createElement('p');
+            newElement.textContent = 'This paragraph was added dynamically by Python!';
+            newElement.style.color = 'blue';
+            container.appendChild(newElement);
+            console.log("DOM was changed by a call from Python.");
+        }
 
-    function applyTheme(theme) {
-      if (theme === 'dark') {
-        body.classList.add('dark-theme');
-      } else {
-        body.classList.remove('dark-theme');
-      }
-    }
+        // 4. Function for JS to call Python
+        function sendToPython() {
+            const data = { event: 'button_click', value: 'Hello from JavaScript!' };
+            let response = "No Python interface found.";
 
-    function handleSystemTheme() {
-      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-      applyTheme(prefersDark ? 'dark' : 'light');
-    }
+            if (window.pywebview && window.pywebview.api) {
+                // pywebview
+                window.pywebview.api.js_called_python(data).then(res => {
+                    console.log("Python responded: " + res);
+                    document.getElementById('message').textContent = "Python responded: " + res;
+                });
+            } else if (window.Android) {
+                // Android
+                response = window.Android.jsCalledPython(JSON.stringify(data));
+                document.getElementById('message').textContent = "Python responded: " + response;
+            } else {
+                console.log(response);
+            }
+        }
 
-    themeSelect.addEventListener('change', (e) => {
-      const selectedTheme = e.target.value;
-      localStorage.setItem('theme', selectedTheme);
-      if (selectedTheme === 'system') {
-        handleSystemTheme();
-      } else {
-        applyTheme(selectedTheme);
-      }
-    });
-
-    document.addEventListener('DOMContentLoaded', () => {
-      const savedTheme = localStorage.getItem('theme') || 'system';
-      themeSelect.value = savedTheme;
-      if (savedTheme === 'system') {
-        handleSystemTheme();
-      } else {
-        applyTheme(savedTheme);
-      }
-    });
-
-    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
-      if (themeSelect.value === 'system') {
-        handleSystemTheme();
-      }
-    });
-
-    // Search logic
-    const searchBtn = document.getElementById('search-button');
-    const searchInput = document.getElementById('search-input');
-    const moreButton = document.getElementById('more-button');
-
-    function isUrl(text) {
-      return /^(https?://|www\.)/.test(text);
-    }
-
-    function handleSearch() {
-      const input = searchInput.value.trim();
-      if (!input) return;
-
-      const url = isUrl(input)
-        ? (input.startsWith('http') ? input : 'https://' + input)
-        : 'https://www.google.com/search?q=' + encodeURIComponent(input);
-
-      window.location.href = url;
-    }
-
-    searchBtn.addEventListener('click', handleSearch);
-    searchInput.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') handleSearch();
-    });
-
-    moreButton.addEventListener('click', () => {
-      alert('More button clicked! (Placeholder for settings/features)');
-    });
-  </script>
+        // Let Python know the page is loaded and ready
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log("HTML DOM content fully loaded and parsed.");
+            if (window.Android && typeof window.Android.onPageLoaded === 'function') {
+                window.Android.onPageLoaded(window.location.href);
+            }
+        });
+    </script>
 </body>
 </html>

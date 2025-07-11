@@ -17,6 +17,7 @@ class AndroidWebView(Widget, WebViewInterface):
     # Kivy property to hold the native Android WebView instance
     _android_webview_instance = ObjectProperty(None)
     on_page_finished_callback = ObjectProperty(None)
+    on_console_message_callback = ObjectProperty(None)
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
