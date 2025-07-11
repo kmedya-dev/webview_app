@@ -119,9 +119,33 @@ jobs:
       - name: Reset Compiler Environment (Safety)
         run: |
           # Unset compiler-related environment variables to prevent conflicts with Android NDK toolchains.
-          # Re-export PATH to ensure system binaries are prioritized.
+          # Explicitly set CC and CXX to use the NDK's clang with appropriate sysroot and include paths.
           unset CC CXX LD
           export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:$PATH" # Ensure system paths are first
+          export NDK_TOOLCHAIN_BIN="${{ env.ANDROID_NDK_HOME }}/toolchains/llvm/prebuilt/linux-x86_64/bin"
+          export NDK_SYSROOT="${{ env.ANDROID_NDK_HOME }}/toolchains/llvm/prebuilt/linux-x86_64/sysroot"
+          export CC="$NDK_TOOLCHAIN_BIN/aarch64-linux-android${{ env.PLATFORMS_VERSION }}-clang --sysroot=$NDK_SYSROOT"
+          export CXX="$NDK_TOOLCHAIN_BIN/aarch64-linux-android${{ env.PLATFORMS_VERSION }}-clang++ --sysroot=$NDK_SYSROOT"
+          export AR="$NDK_TOOLCHAIN_BIN/llvm-ar"
+          export RANLIB="$NDK_TOOLCHAIN_BIN/llvm-ranlib"
+          export STRIP="$NDK_TOOLCHAIN_BIN/llvm-strip"
+          export LD="$NDK_TOOLCHAIN_BIN/ld"
+          export LDFLAGS="-L$NDK_SYSROOT/usr/lib/aarch64-linux-android/${{ env.PLATFORMS_VERSION }}"
+          export CFLAGS="-I$NDK_SYSROOT/usr/include"
+          export CXXFLAGS="-I$NDK_SYSROOT/usr/include"
+          echo "CC=$CC" >> $GITHUB_ENV
+          echo "CXX=$CXX" >> $GITHUB_ENV
+          echo "AR=$AR" >> $GITHUB_ENV
+          echo "RANLIB=$RANLIB" >> $GITHUB_ENV
+          echo "STRIP=$STRIP" >> $GITHUB_ENV
+          echo "LD=$LD" >> $GITHUB_ENV
+          echo "LDFLAGS=$LDFLAGS" >> $GITHUB_ENV
+          echo "CFLAGS=$CFLAGS" >> $GITHUB_ENV
+          echo "CXXFLAGS=$CXXFLAGS" >> $GITHUB_ENV
+          echo "PATH=$PATH" >> $GITHUB_ENV # Re-export modified PATH
+          echo "NDK_TOOLCHAIN_BIN=$NDK_TOOLCHAIN_BIN" >> $GITHUB_ENV
+          echo "NDK_SYSROOT=$NDK_SYSROOT" >> $GITHUB_ENV
+          echo "PLATFORMS_VERSION=${{ env.PLATFORMS_VERSION }}" >> $GITHUB_ENV # Ensure PLATFORMS_VERSION is available for subsequent steps
 
       - name: Clean Buildozer Cache
         run: |
