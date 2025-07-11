@@ -34,7 +34,7 @@ version = 3.12
 
 # (list) Application requirements
 # comma separated e.g. requirements = sqlite3,kivy
-requirements = python3==3.11,kivy,webview-android,pywebview,openssl,zlib,babel
+requirements = python3==3.11.5,kivy,webview-android,pywebview,openssl,zlib,babel
 android.compile_options = -DOPENSSL_NO_SSL3
 
 
@@ -453,7 +453,7 @@ tests/*
 INTERNET
 
 [app:requirements@demo]
-requirements = python3==3.11,kivy,webview-android,pywebview,openssl,zlib,babel
+requirements = python3==3.11.5,kivy,webview-android,pywebview,openssl,zlib,babel
 
 [app:android.compile_options@demo]
 -DOPENSSL_NO_SSL3
