@@ -142,7 +142,7 @@ jobs:
           echo "🚀 Starting Buildozer Debug Build for profile: ${{ env.PROFILE }}"
           touch buildozer.log
           # Execute the build process for the debug APK
-          buildozer android debug 2>&1 | tee buildozer.log || echo "❌ Build failed, but log captured."
+          buildozer android debug --android-api=33 2>&1 | tee buildozer.log || echo "❌ Build failed, but log captured."
           echo "✅ Build step completed (even if with errors)."
 
       - name: Upload Buildozer Log Artifact
