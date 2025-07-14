@@ -1,83 +1,146 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kivy WebView Test</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Kivy WebView Demo</title>
     <style>
-        body { font-family: sans-serif; padding: 1rem; }
-        #container { padding: 1rem; border: 1px solid #ccc; border-radius: 8px; }
-        button { margin-top: 1rem; padding: 0.5rem 1rem; font-size: 1rem; }
+        body {
+            font-family: sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f0f0;
+            color: #333;
+        }
+        .container {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            text-align: center;
+            width: 90%;
+            max-width: 500px;
+        }
+        h1 {
+            color: #007bff;
+        }
+        button {
+            background-color: #28a745;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            margin: 10px 5px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            opacity: 0.9;
+        }
+        #pythonMessage {
+            margin-top: 20px;
+            font-size: 1.1em;
+            color: #666;
+            font-weight: bold;
+        }
+        .log-output {
+            margin-top: 15px;
+            padding: 10px;
+            background-color: #e9ecef;
+            border-radius: 5px;
+            text-align: left;
+            max-height: 150px;
+            overflow-y: auto;
+            font-family: monospace;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
     </style>
 </head>
 <body>
-    <h1>Kivy & WebView</h1>
-    <div id="container">
-        <p id="message">Welcome! This content is from the local HTML file.</p>
+    <div class="container">
+        <h1>Kivy WebView Demo</h1>
+        <p>This is an HTML page loaded in a Kivy WebView.</p>
+
+        <button onclick="sendToPython()">Send Data to Python</button>
+        <button onclick="logConsoleMessage()">Log to Console</button>
+
+        <p id="pythonMessage">Waiting for message from Python...</p>
+
+        <div class="log-output" id="logOutput"></div>
     </div>
-    <button onclick="sendToPython()">Call Python from JS</button>
 
     <script>
-        // 1. Override console.log to send messages to Python
-        const originalLog = console.log;
-        console.log = function(message) {
-            originalLog.apply(console, arguments); // Keep original behavior
-            // For Android, the WebChromeClient will capture this.
-            // For pywebview, we need a specific mechanism if we want to intercept it.
-            // The most reliable way is to use the JS API.
-            if (window.pywebview && window.pywebview.api) {
-                window.pywebview.api.log_from_js(message);
-            } else if (window.Android && window.Android.logToPython) {
-                // This is a custom function we can add to our JS interface
-                window.Android.logToPython(JSON.stringify(message));
+        const logOutput = document.getElementById('logOutput');
+
+        function logToPage(message) {
+            const p = document.createElement('p');
+            p.textContent = message;
+            logOutput.appendChild(p);
+            logOutput.scrollTop = logOutput.scrollHeight; // Scroll to bottom
+        }
+
+        // --- JS to Python Communication ---
+        function sendToPython() {
+            const data = { 'event': 'buttonClick', 'value': Math.random().toFixed(4) };
+            logToPage(`JS: Sending to Python: ${JSON.stringify(data)}`);
+            if (typeof Android !== 'undefined' && Android.jsCalledPython) {
+                // Android (pyjnius) interface
+                const response = Android.jsCalledPython(JSON.stringify(data));
+                logToPage(`JS: Android response: ${response}`);
+            } else if (typeof pywebview !== 'undefined' && pywebview.api.js_called_python) {
+                // Desktop (pywebview) interface
+                pywebview.api.js_called_python(data).then(response => {
+                    logToPage(`JS: Desktop response: ${response}`);
+                });
+            } else {
+                logToPage('JS: No Python interface found.');
+            }
+        }
+
+        // --- Console Logging ---
+        function logConsoleMessage() {
+            const message = `Hello from JS console! Time: ${new Date().toLocaleTimeString()}`;
+            console.log(message);
+            logToPage(`JS: console.log('${message}') called.`);
+        }
+
+        // Override console.log to also send to Python (for Android)
+        const originalConsoleLog = console.log;
+        console.log = function(...args) {
+            originalConsoleLog.apply(console, args);
+            const message = args.map(arg => typeof arg === 'object' ? JSON.stringify(arg) : arg).join(' ');
+            if (typeof Android !== 'undefined' && Android.logToPython) {
+                Android.logToPython(message);
+            } else if (typeof pywebview !== 'undefined' && pywebview.api.log_from_js) {
+                pywebview.api.log_from_js(message);
             }
         };
 
-        console.log("JavaScript environment is ready.");
-
-        // 2. Function for Python to call to update the DOM
+        // --- Python to JS Communication ---
         function updateFromPython(message) {
-            document.getElementById('message').textContent = message;
-            console.log(`DOM updated by Python with message: "${message}"`);
+            document.getElementById('pythonMessage').textContent = `Message from Python: ${message}`;
+            logToPage(`JS: Received from Python: ${message}`);
         }
 
-        // 3. Function for Python to call to dynamically change the DOM
         function changeDom() {
-            const container = document.getElementById('container');
-            const newElement = document.createElement('p');
-            newElement.textContent = 'This paragraph was added dynamically by Python!';
-            newElement.style.color = 'blue';
-            container.appendChild(newElement);
-            console.log("DOM was changed by a call from Python.");
+            const heading = document.querySelector('h1');
+            heading.textContent = 'DOM Changed by Python!';
+            heading.style.color = '#dc3545';
+            logToPage('JS: DOM changed by Python request.');
         }
 
-        // 4. Function for JS to call Python
-        function sendToPython() {
-            const data = { event: 'button_click', value: 'Hello from JavaScript!' };
-            let response = "No Python interface found.";
-
-            if (window.pywebview && window.pywebview.api) {
-                // pywebview
-                window.pywebview.api.js_called_python(data).then(res => {
-                    console.log("Python responded: " + res);
-                    document.getElementById('message').textContent = "Python responded: " + res;
-                });
-            } else if (window.Android) {
-                // Android
-                response = window.Android.jsCalledPython(JSON.stringify(data));
-                document.getElementById('message').textContent = "Python responded: " + response;
-            } else {
-                console.log(response);
+        // Inform Python when the page is loaded (Android specific)
+        window.onload = function() {
+            if (typeof Android !== 'undefined' && Android.onPageLoaded) {
+                Android.onPageLoaded(window.location.href);
             }
-        }
+            logToPage('JS: Page loaded.');
+        };
 
-        // Let Python know the page is loaded and ready
-        document.addEventListener('DOMContentLoaded', () => {
-            console.log("HTML DOM content fully loaded and parsed.");
-            if (window.Android && typeof window.Android.onPageLoaded === 'function') {
-                window.Android.onPageLoaded(window.location.href);
-            }
-        });
     </script>
 </body>
 </html>

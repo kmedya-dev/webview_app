@@ -46,8 +46,10 @@ public class KivyWebView extends WebView {
                 Log.d(TAG, "JS Console: " + consoleMessage.message() + " -- From line "
                         + consoleMessage.lineNumber() + " of "
                         + consoleMessage.sourceId());
-                // You can pass this message back to Python if needed
-                // For now, just log to Android Logcat
+                // Pass console message to Python
+                if (mActivity != null) {
+                    mActivity.callPython("on_console_message", consoleMessage.message());
+                }
                 return true; // Indicate that we've handled the message
             }
         });
@@ -65,20 +67,10 @@ public class KivyWebView extends WebView {
         }
 
         @android.webkit.JavascriptInterface
-        public void onPageLoaded(String url) {
-            Log.d(TAG, "JS called onPageLoaded: " + url);
-            // Call a Python method on the main thread
+        public void callPython(final String functionName, final String message) {
+            Log.d(TAG, "JS called Python function: " + functionName + " with message: " + message);
             if (activity != null) {
-                activity.runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        // This will call the Python method `on_page_loaded` in your Kivy app
-                        // You'll need to set up a Python callable in your Kivy app to receive this.
-                        // For now, we'll just log it.
-                        Log.d(TAG, "Calling Python on_page_loaded from Java.");
-                        // This is a placeholder. Actual Python callback will be set up in main.py
-                    }
-                });
+                activity.callPython(functionName, message);
             }
         }
     }

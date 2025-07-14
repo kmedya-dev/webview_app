@@ -48,8 +48,7 @@ class MainLayout(BoxLayout):
 
         self.py_to_dom_btn = Button(text='Py -> JS (DOM)')
         self.py_to_dom_btn.bind(on_release=self.change_dom_from_python)
-        controls_layout.add_widget(self.py_to_dom_btn)
-        self.add_widget(controls_layout)
+        controls_layout.add_widget(controls_layout)
 
         # --- Platform-Specific WebView Initialization ---
         self.webview = None

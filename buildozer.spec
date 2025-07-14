@@ -33,8 +33,7 @@ version = 3.12
 # version.filename = %(source.dir)s/main.py
 
 # (list) Application requirements
-# comma separated e.g. requirements = sqlite3,kivy
-requirements = python3==3.11.5,kivy,webview-android,pywebview,openssl,zlib,babel
+requirements = python3==3.11.5,kivy,webview-android,pywebview,openssl,zlib,babel,pyjnius
 android.compile_options = -DOPENSSL_NO_SSL3
 
 
@@ -100,7 +99,7 @@ android.permissions = android.permission.INTERNET
 #android.features = android.hardware.usb.host
 
 # (int) Target Android API, should be as high as possible.
-android.api = 33
+android.api = 30
 
 # (int) Minimum API your APK / AAB will support.
 android.minapi = 21
