@@ -178,7 +178,7 @@ android.accept_sdk_license = True
 # (list) List of Java files to add to the android project (can be java or a
 # directory containing the files)
 android.add_src = src/main/java
-android.add_build_args = --extra-cflags=-I/home/runner/work/webview_app/webview_app/android-ndk-r25b/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include --extra-ldflags=-L/home/runner/work/webview_app/webview_app/android-ndk-r25b/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib
+android.add_build_args = --extra-cflags="-nostdinc -I/home/runner/work/webview_app/webview_app/android-ndk-r25b/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include" --extra-ldflags="-L/home/runner/work/webview_app/webview_app/android-ndk-r25b/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib"
 
 # (list) Android AAR archives to add
 #android.add_aars =
