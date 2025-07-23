@@ -116,12 +116,7 @@ jobs:
           sed -i '/^#android.ndk_path/s/^#//' buildozer.spec
           sed -i "s|^android.ndk_path =.*|android.ndk_path = ${ANDROID_NDK_HOME}|g" buildozer.spec
 
-      - name: Reset Compiler Environment (Safety)
-        run: |
-          # Unset compiler-related environment variables to prevent conflicts with Android NDK toolchains.
-          # Re-export PATH to ensure system binaries are prioritized.
-          unset CC CXX LD
-          export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:$PATH" # Ensure system paths are first
+      
 
       - name: Clean Buildozer Cache
         run: |
