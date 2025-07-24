@@ -34,7 +34,7 @@ version = 3.12
 
 # (list) Application requirements
 # comma separated e.g. requirements = sqlite3,kivy
-requirements = python,kivy,kivy-garden.webview,pysdl2,openssl,zlib
+requirements = python,kivy,pysdl2,openssl,zlib
 android.compile_options = -DOPENSSL_NO_SSL3
 
 # Explicitly set pyjnius source to ensure compatibility with Python 3
@@ -454,7 +454,7 @@ tests/*
 INTERNET
 
 [app:requirements@demo]
-python,kivy,kivy-garden.webview,pysdl2,openssl,zlib
+python,kivy,pysdl2,openssl,zlib
 
 [app:android.compile_options@demo]
 -DOPENSSL_NO_SSL3

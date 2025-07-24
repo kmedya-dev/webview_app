@@ -1,6 +1,9 @@
 # Core Kivy Framework
 kivy>=2.3.0
 
+# Desktop WebView support (do NOT add to buildozer.spec)
+pywebview
+
 # Build Tools  
 buildozer>=1.5.0
 cython>=0.29.33
