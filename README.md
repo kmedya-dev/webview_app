@@ -129,3 +129,46 @@ This version includes significant improvements:
 - ✅ **Cross-platform development** support
 - ✅ **Optimized dependencies** for faster, more reliable builds
 - ✅ **Automated setup** for quick development environment creation
+
+## Requirements
+
+- Python 3.8+
+- Kivy >=2.3.0
+- Buildozer (for Android builds)
+- Cython
+- setuptools >=60.0.0
+- python-for-android==2024.1.21
+- pywebview (for desktop support only, do NOT add to buildozer.spec)
+
+Install all requirements for desktop development:
+
+```sh
+pip install -r requirements.txt
+```
+
+For Android builds, ensure your `buildozer.spec` requirements line is:
+
+```
+requirements = python,kivy,pysdl2,openssl,zlib
+```
+
+**Do NOT add pywebview to buildozer.spec.**
+
+## Cross-Platform WebView Support
+
+- **Android:** Uses the native Android WebView via pyjnius (no kivy-garden.webview, no pywebview)
+- **Desktop (Windows, Linux, macOS):** Uses pywebview (opens in a separate window)
+
+## Running on Desktop
+
+```sh
+python main.py
+```
+This will launch the Kivy app and open the webview in a separate window (requires pywebview).
+
+## Building for Android
+
+```sh
+buildozer android debug
+```
+This will build the APK using the native Android WebView. Do not include pywebview in your buildozer.spec.
