@@ -27,15 +27,6 @@ else
 fi
 
 # --- Verify webview modules ---
-log " Installing webview modules..."
-pip install webview-android pywebview
-
-log " Verifying webview-android and pywebview imports..."
-python -c "from webview import WebView; import pywebview" || {
-  log "❌ Import failed. Check module versions or requirements."
-  exit 1
-}
-
 # --- Launch Buildozer ---
 log " Launching Buildozer with profile @$PROFILE..."
 buildozer -v -p android "$PROFILE" debug --android-api=33
