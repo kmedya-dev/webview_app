@@ -118,6 +118,11 @@ jobs:
 
       
 
+      - name: Force Host Compiler for Buildozer
+        run: |
+          echo "CC=gcc" >> $GITHUB_ENV
+          echo "CXX=g++" >> $GITHUB_ENV
+
       - name: Clean Buildozer Cache
         run: |
           # Remove previous Buildozer build artifacts and caches to ensure a clean build.
